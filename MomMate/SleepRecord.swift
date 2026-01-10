@@ -1,6 +1,6 @@
 //
 //  SleepRecord.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Data model for sleep records
 //

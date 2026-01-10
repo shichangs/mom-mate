@@ -1,6 +1,6 @@
 //
-//  BabySleepTrackerApp.swift
-//  BabySleepTracker
+//  MomMateApp.swift
+//  MomMate
 //
 //  应用入口
 //
@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct BabySleepTrackerApp: App {
+struct MomMateApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

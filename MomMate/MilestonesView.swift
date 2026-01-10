@@ -1,6 +1,6 @@
 //
 //  MilestonesView.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Milestones view
 //

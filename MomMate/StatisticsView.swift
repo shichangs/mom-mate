@@ -1,6 +1,6 @@
 //
 //  StatisticsView.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Apple-inspired statistics view with clean charts and data visualization
 //

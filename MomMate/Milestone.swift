@@ -1,6 +1,6 @@
 //
 //  Milestone.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Milestone data model
 //

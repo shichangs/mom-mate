@@ -41,9 +41,9 @@
 ## 项目结构
 
 ```
-BabySleepTracker/
-├── BabySleepTracker/
-│   ├── BabySleepTrackerApp.swift   # 应用入口
+MomMate/
+├── MomMate/
+│   ├── MomMateApp.swift   # 应用入口
 │   ├── MainTabView.swift           # 主导航视图
 │   ├── SleepRecord.swift           # 睡眠数据模型
 │   ├── SleepRecordManager.swift    # 睡眠数据管理器
@@ -53,7 +53,7 @@ BabySleepTracker/
 │   ├── MilestoneManager.swift      # 里程碑数据管理器
 │   ├── DesignSystem.swift          # 全局设计系统
 │   └── Assets.xcassets/            # 资源文件
-└── BabySleepTracker.xcodeproj/     # Xcode 项目文件
+└── MomMate.xcodeproj/     # Xcode 项目文件
 ```
 
 ## 开发环境

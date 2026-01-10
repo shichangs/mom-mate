@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Main content view - now serves as entry point to MainTabView
 //

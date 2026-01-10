@@ -1,6 +1,6 @@
 //
 //  MilestonesTabView.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Apple-inspired milestones view with timeline layout
 //

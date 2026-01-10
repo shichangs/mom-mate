@@ -1,6 +1,6 @@
 //
 //  MealRecord.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Meal record data model
 //

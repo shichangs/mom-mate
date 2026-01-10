@@ -1,6 +1,6 @@
 //
 //  SleepRecordManager.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Manages sleep records storage and retrieval
 //

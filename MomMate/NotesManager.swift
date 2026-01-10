@@ -1,6 +1,6 @@
 //
 //  NotesManager.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Manages markdown notes storage
 //
@@ -44,8 +44,8 @@ class NotesManager: ObservableObject {
 
 ### 项目结构
 ```
-BabySleepTracker/
-├── BabySleepTrackerApp.swift      # App 入口，使用 MainTabView 作为根视图
+MomMate/
+├── MomMateApp.swift      # App 入口，使用 MainTabView 作为根视图
 ├── MainTabView.swift              # 底部 Tab 导航，包含 SleepHomeView
 ├── ContentView.swift              # 旧版主视图（已废弃，保留用于兼容）
 ├── SleepRecord.swift              # 数据模型：睡眠记录

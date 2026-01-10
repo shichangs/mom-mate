@@ -1,6 +1,6 @@
 //
 //  MilestoneManager.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Manages milestones storage and retrieval
 //

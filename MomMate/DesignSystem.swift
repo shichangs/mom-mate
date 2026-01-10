@@ -1,6 +1,6 @@
 //
 //  DesignSystem.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  Apple-inspired design system with colors, typography, and reusable components
 //

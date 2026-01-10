@@ -1,6 +1,6 @@
 //
 //  MainTabView.swift
-//  BabySleepTracker
+//  MomMate
 //
 //  4-tab navigation with Apple-inspired design
 //
