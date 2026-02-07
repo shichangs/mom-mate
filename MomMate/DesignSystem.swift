@@ -2,59 +2,85 @@
 //  DesignSystem.swift
 //  MomMate
 //
-//  Apple-inspired design system with colors, typography, and reusable components
+//  Premium Apple-inspired design system with Glassmorphism, Micro-interactions, and Semantic Colors
 //
 
 import SwiftUI
 
-// MARK: - Colors
+// MARK: - Semantic Colors (情绪化色彩)
 struct AppColors {
     // Primary palette
-    static let primary = Color(hex: "5E5CE6")        // Soft indigo
-    static let secondary = Color(hex: "FF6B6B")      // Warm coral
-    static let accent = Color(hex: "34C759")         // Apple green
-    static let warning = Color(hex: "FF9500")        // Orange
+    static let primary = Color(hex: "5E5CE6")        // 宁静紫
+    static let secondary = Color(hex: "FF6B6B")      // 温暖珊瑚
+    static let accent = Color(hex: "34C759")         // 活力绿
+    static let warning = Color(hex: "FF9500")        // 警示橙
     
-    // Semantic colors
-    static let sleep = Color(hex: "5E5CE6")          // Indigo for sleep
-    static let awake = Color(hex: "FF9F0A")          // Warm amber for awake
-    static let meal = Color(hex: "30D158")           // Fresh green for meals
-    static let milestone = Color(hex: "BF5AF2")      // Purple for milestones
+    // Semantic/Emotional colors (情绪色)
+    static let sleep = Color(hex: "6366F1")          // 安睡紫 - Indigo for peaceful sleep
+    static let awake = Color(hex: "F59E0B")          // 活力橙 - Amber for energy
+    static let meal = Color(hex: "10B981")           // 成长绿 - Emerald for nourishment
+    static let milestone = Color(hex: "A855F7")      // 喜悦紫 - Purple for celebration
+    static let notes = Color(hex: "06B6D4")          // 记录青 - Cyan for notes
     
     // Backgrounds
-    static let background = Color(hex: "F2F2F7")     // System gray 6
+    static let background = Color(hex: "F8FAFC")     // Light slate
     static let surface = Color.white
-    static let surfaceSecondary = Color(hex: "F9F9FB")
+    static let surfaceSecondary = Color(hex: "F1F5F9")
+    static let surfaceElevated = Color(hex: "FFFFFF")
+    
+    // Dark mode surfaces
+    static let darkBackground = Color(hex: "0F172A")
+    static let darkSurface = Color(hex: "1E293B")
     
     // Text
-    static let textPrimary = Color(hex: "1C1C1E")
-    static let textSecondary = Color(hex: "8E8E93")
-    static let textTertiary = Color(hex: "AEAEB2")
+    static let textPrimary = Color(hex: "0F172A")
+    static let textSecondary = Color(hex: "64748B")
+    static let textTertiary = Color(hex: "94A3B8")
     
-    // Gradients
+    // MARK: - Premium Gradients (高级渐变)
     static let sleepGradient = LinearGradient(
-        colors: [Color(hex: "5E5CE6"), Color(hex: "7B7BF7")],
+        colors: [Color(hex: "6366F1"), Color(hex: "8B5CF6"), Color(hex: "A78BFA")],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     
     static let awakeGradient = LinearGradient(
-        colors: [Color(hex: "FF9F0A"), Color(hex: "FFB340")],
+        colors: [Color(hex: "F59E0B"), Color(hex: "FBBF24"), Color(hex: "FCD34D")],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     
-    static let accentGradient = LinearGradient(
-        colors: [Color(hex: "34C759"), Color(hex: "30D158")],
-        startPoint: .leading,
-        endPoint: .trailing
+    static let mealGradient = LinearGradient(
+        colors: [Color(hex: "10B981"), Color(hex: "34D399"), Color(hex: "6EE7B7")],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let milestoneGradient = LinearGradient(
+        colors: [Color(hex: "A855F7"), Color(hex: "C084FC"), Color(hex: "DDD6FE")],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let heroGradient = LinearGradient(
+        colors: [Color(hex: "6366F1"), Color(hex: "8B5CF6"), Color(hex: "EC4899")],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
     )
     
     static let backgroundGradient = LinearGradient(
-        colors: [Color(hex: "F8F8FC"), Color(hex: "F2F2F7")],
+        colors: [Color(hex: "F8FAFC"), Color(hex: "E2E8F0")],
         startPoint: .top,
         endPoint: .bottom
     )
+    
+    // Mesh gradient colors for iOS 17+
+    static let meshColors: [Color] = [
+        Color(hex: "6366F1"),
+        Color(hex: "8B5CF6"),
+        Color(hex: "EC4899"),
+        Color(hex: "F59E0B")
+    ]
 }
 
 // MARK: - Color Extension
@@ -84,41 +110,56 @@ extension Color {
     }
 }
 
-// MARK: - Typography
+// MARK: - Typography (动态字体)
 struct AppTypography {
-    // Large Title
-    static let largeTitle = Font.system(size: 34, weight: .bold, design: .rounded)
+    // 字体缩放比例 (默认 1.0)
+    // 获取用户设置的缩放比例，建议在 View 中通过 @AppStorage("fontSizeFactor") 传递给这里或直接读取
+    static var fontScale: CGFloat {
+        UserDefaults.standard.double(forKey: "fontSizeFactor") == 0 ? 1.0 : CGFloat(UserDefaults.standard.double(forKey: "fontSizeFactor"))
+    }
+    
+    private static func scaledFont(size: CGFloat, weight: Font.Weight, design: Font.Design = .default) -> Font {
+        return Font.system(size: size * fontScale, weight: weight, design: design)
+    }
+
+    // Large Title - Extra bold for hero sections
+    static var largeTitle: Font { scaledFont(size: 34, weight: .heavy, design: .rounded) }
+    static var largeTitleSerif: Font { scaledFont(size: 34, weight: .bold, design: .serif) }
     
     // Titles
-    static let title1 = Font.system(size: 28, weight: .bold, design: .rounded)
-    static let title2 = Font.system(size: 22, weight: .bold, design: .rounded)
-    static let title3 = Font.system(size: 20, weight: .semibold, design: .rounded)
+    static var title1: Font { scaledFont(size: 28, weight: .bold, design: .rounded) }
+    static var title2: Font { scaledFont(size: 22, weight: .bold, design: .rounded) }
+    static var title3: Font { scaledFont(size: 20, weight: .semibold, design: .rounded) }
     
     // Body
-    static let body = Font.system(size: 17, weight: .regular, design: .default)
-    static let bodyMedium = Font.system(size: 17, weight: .medium, design: .default)
-    static let bodySemibold = Font.system(size: 17, weight: .semibold, design: .default)
+    static var body: Font { scaledFont(size: 17, weight: .regular) }
+    static var bodyMedium: Font { scaledFont(size: 17, weight: .medium) }
+    static var bodySemibold: Font { scaledFont(size: 17, weight: .semibold) }
     
     // Callout
-    static let callout = Font.system(size: 16, weight: .regular, design: .default)
-    static let calloutMedium = Font.system(size: 16, weight: .medium, design: .default)
+    static var callout: Font { scaledFont(size: 16, weight: .regular) }
+    static var calloutMedium: Font { scaledFont(size: 16, weight: .medium) }
     
     // Subhead
-    static let subhead = Font.system(size: 15, weight: .regular, design: .default)
-    static let subheadMedium = Font.system(size: 15, weight: .medium, design: .default)
+    static var subhead: Font { scaledFont(size: 15, weight: .regular) }
+    static var subheadMedium: Font { scaledFont(size: 15, weight: .medium) }
     
     // Footnote
-    static let footnote = Font.system(size: 13, weight: .regular, design: .default)
-    static let footnoteMedium = Font.system(size: 13, weight: .medium, design: .default)
+    static var footnote: Font { scaledFont(size: 13, weight: .regular) }
+    static var footnoteMedium: Font { scaledFont(size: 13, weight: .medium) }
     
     // Caption
-    static let caption = Font.system(size: 12, weight: .regular, design: .default)
-    static let captionMedium = Font.system(size: 12, weight: .medium, design: .default)
+    static var caption: Font { scaledFont(size: 12, weight: .regular) }
+    static var captionMedium: Font { scaledFont(size: 12, weight: .medium) }
     
-    // Display (for large numbers)
-    static let display = Font.system(size: 56, weight: .bold, design: .rounded)
-    static let displayMedium = Font.system(size: 44, weight: .bold, design: .rounded)
-    static let displaySmall = Font.system(size: 36, weight: .bold, design: .rounded)
+    // Display (for large numbers) - More dramatic
+    static var display: Font { scaledFont(size: 64, weight: .heavy, design: .rounded) }
+    static var displayMedium: Font { scaledFont(size: 48, weight: .bold, design: .rounded) }
+    static var displaySmall: Font { scaledFont(size: 36, weight: .bold, design: .rounded) }
+    
+    // Monospace for timers
+    static var timer: Font { scaledFont(size: 56, weight: .bold, design: .monospaced) }
+    static var timerSmall: Font { scaledFont(size: 32, weight: .semibold, design: .monospaced) }
 }
 
 // MARK: - Spacing
@@ -131,28 +172,126 @@ struct AppSpacing {
     static let xl: CGFloat = 24
     static let xxl: CGFloat = 32
     static let xxxl: CGFloat = 48
+    static let huge: CGFloat = 64
 }
 
 // MARK: - Corner Radius
 struct AppRadius {
-    static let sm: CGFloat = 8
-    static let md: CGFloat = 12
-    static let lg: CGFloat = 16
-    static let xl: CGFloat = 20
-    static let xxl: CGFloat = 28
-    static let full: CGFloat = 100
+    static let xs: CGFloat = 6
+    static let sm: CGFloat = 10
+    static let md: CGFloat = 14
+    static let lg: CGFloat = 18
+    static let xl: CGFloat = 24
+    static let xxl: CGFloat = 32
+    static let full: CGFloat = 9999
 }
 
-// MARK: - Shadows
+// MARK: - Layered Shadows (多层阴影体系)
 struct AppShadow {
-    static let small = (color: Color.black.opacity(0.04), radius: CGFloat(8), x: CGFloat(0), y: CGFloat(2))
-    static let medium = (color: Color.black.opacity(0.06), radius: CGFloat(16), x: CGFloat(0), y: CGFloat(4))
-    static let large = (color: Color.black.opacity(0.08), radius: CGFloat(24), x: CGFloat(0), y: CGFloat(8))
+    // Subtle elevation
+    static let small = (
+        color: Color.black.opacity(0.04),
+        radius: CGFloat(8),
+        x: CGFloat(0),
+        y: CGFloat(2)
+    )
+    
+    // Cards and surfaces
+    static let medium = (
+        color: Color.black.opacity(0.08),
+        radius: CGFloat(16),
+        x: CGFloat(0),
+        y: CGFloat(4)
+    )
+    
+    // Floating elements
+    static let large = (
+        color: Color.black.opacity(0.12),
+        radius: CGFloat(24),
+        x: CGFloat(0),
+        y: CGFloat(8)
+    )
+    
+    // Dramatic depth
+    static let xlarge = (
+        color: Color.black.opacity(0.16),
+        radius: CGFloat(32),
+        x: CGFloat(0),
+        y: CGFloat(12)
+    )
+    
+    // Colored shadow (for buttons)
+    static func colored(_ color: Color) -> (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
+        return (color: color.opacity(0.4), radius: 16, x: 0, y: 6)
+    }
+}
+
+// MARK: - Animation Presets (动画预设)
+struct AppAnimation {
+    static let springBouncy = Animation.spring(response: 0.4, dampingFraction: 0.6, blendDuration: 0)
+    static let springSmooth = Animation.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0)
+    static let springSnappy = Animation.spring(response: 0.3, dampingFraction: 0.7, blendDuration: 0)
+    static let easeOutQuick = Animation.easeOut(duration: 0.2)
+    static let easeInOutMedium = Animation.easeInOut(duration: 0.35)
 }
 
 // MARK: - View Modifiers
 
-// Card style modifier
+// Glassmorphism Card (毛玻璃卡片)
+struct GlassCardStyle: ViewModifier {
+    var padding: CGFloat = AppSpacing.lg
+    var cornerRadius: CGFloat = AppRadius.xl
+    
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(
+                ZStack {
+                    // Blurred background
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(.ultraThinMaterial)
+                    
+                    // Subtle border
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [.white.opacity(0.5), .white.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                }
+            )
+            .shadow(
+                color: AppShadow.medium.color,
+                radius: AppShadow.medium.radius,
+                x: AppShadow.medium.x,
+                y: AppShadow.medium.y
+            )
+    }
+}
+
+// Elevated Card with layered shadows
+struct ElevatedCardStyle: ViewModifier {
+    var padding: CGFloat = AppSpacing.lg
+    var cornerRadius: CGFloat = AppRadius.xl
+    
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(AppColors.surface)
+            )
+            // Multiple shadow layers for depth
+            .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 1)
+            .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+            .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+    }
+}
+
+// Legacy Card style (保持向后兼容)
 struct CardStyle: ViewModifier {
     var padding: CGFloat = AppSpacing.lg
     
@@ -170,7 +309,55 @@ struct CardStyle: ViewModifier {
     }
 }
 
-// Primary button style
+// Floating Action Button Style (悬浮按钮)
+struct FloatingButtonStyle: ButtonStyle {
+    var color: Color = AppColors.primary
+    var size: CGFloat = 56
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 24, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(width: size, height: size)
+            .background(
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            // Colored shadow
+            .shadow(color: color.opacity(0.4), radius: 12, x: 0, y: 6)
+            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
+            .animation(AppAnimation.springBouncy, value: configuration.isPressed)
+    }
+}
+
+// Primary button with gradient
+struct GradientButtonStyle: ButtonStyle {
+    var gradient: LinearGradient = AppColors.heroGradient
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(AppTypography.bodySemibold)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppSpacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: AppRadius.lg)
+                    .fill(gradient)
+            )
+            .shadow(color: AppColors.primary.opacity(0.3), radius: 12, x: 0, y: 6)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .animation(AppAnimation.springSnappy, value: configuration.isPressed)
+    }
+}
+
+// Primary button style (保持兼容)
 struct PrimaryButtonStyle: ButtonStyle {
     var color: Color = AppColors.primary
     
@@ -186,7 +373,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             )
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
             .opacity(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+            .animation(AppAnimation.springSnappy, value: configuration.isPressed)
     }
 }
 
@@ -205,7 +392,7 @@ struct SecondaryButtonStyle: ButtonStyle {
                     .fill(color.opacity(0.12))
             )
             .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+            .animation(AppAnimation.springSnappy, value: configuration.isPressed)
     }
 }
 
@@ -227,9 +414,18 @@ struct ChipStyle: ViewModifier {
     }
 }
 
+// MARK: - View Extensions
 extension View {
     func cardStyle(padding: CGFloat = AppSpacing.lg) -> some View {
         modifier(CardStyle(padding: padding))
+    }
+    
+    func glassCard(padding: CGFloat = AppSpacing.lg, cornerRadius: CGFloat = AppRadius.xl) -> some View {
+        modifier(GlassCardStyle(padding: padding, cornerRadius: cornerRadius))
+    }
+    
+    func elevatedCard(padding: CGFloat = AppSpacing.lg, cornerRadius: CGFloat = AppRadius.xl) -> some View {
+        modifier(ElevatedCardStyle(padding: padding, cornerRadius: cornerRadius))
     }
     
     func chipStyle(color: Color = AppColors.primary, isSelected: Bool = false) -> some View {
@@ -239,23 +435,24 @@ extension View {
 
 // MARK: - Reusable Components
 
-// Icon circle background
+// Icon circle background with gradient option
 struct IconCircle: View {
     let icon: String
     var size: CGFloat = 48
     var iconSize: CGFloat = 22
     var color: Color = AppColors.primary
     var filled: Bool = false
+    var gradient: LinearGradient? = nil
     
     var body: some View {
         ZStack {
             Circle()
-                .fill(filled ? color : color.opacity(0.12))
+                .fill(gradient ?? LinearGradient(colors: [filled ? color : color.opacity(0.12)], startPoint: .top, endPoint: .bottom))
                 .frame(width: size, height: size)
             
             Image(systemName: icon)
                 .font(.system(size: iconSize, weight: .semibold))
-                .foregroundColor(filled ? .white : color)
+                .foregroundColor(filled || gradient != nil ? .white : color)
         }
     }
 }
@@ -298,7 +495,13 @@ struct EmptyStateView: View {
         VStack(spacing: AppSpacing.md) {
             Image(systemName: icon)
                 .font(.system(size: 56, weight: .light))
-                .foregroundColor(color.opacity(0.6))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [color.opacity(0.8), color.opacity(0.4)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
             
             Text(title)
                 .font(AppTypography.title3)
@@ -322,7 +525,7 @@ struct PulsingCircle: View {
     var body: some View {
         Circle()
             .fill(color.opacity(0.3))
-            .scaleEffect(isPulsing ? 1.2 : 1.0)
+            .scaleEffect(isPulsing ? 1.3 : 1.0)
             .opacity(isPulsing ? 0 : 0.6)
             .animation(
                 .easeInOut(duration: 1.5)
@@ -332,5 +535,133 @@ struct PulsingCircle: View {
             .onAppear {
                 isPulsing = true
             }
+    }
+}
+
+// Breathing animation circle (优化的呼吸动画)
+struct BreathingCircle: View {
+    let color: Color
+    var size: CGFloat = 200
+    @State private var isAnimating = false
+    
+    var body: some View {
+        ZStack {
+            // Outer pulse
+            Circle()
+                .fill(color.opacity(0.15))
+                .frame(width: size * 1.4, height: size * 1.4)
+                .scaleEffect(isAnimating ? 1.1 : 0.9)
+            
+            // Middle pulse
+            Circle()
+                .fill(color.opacity(0.25))
+                .frame(width: size * 1.2, height: size * 1.2)
+                .scaleEffect(isAnimating ? 1.05 : 0.95)
+            
+            // Inner circle with gradient
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [color, color.opacity(0.7)],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: size / 2
+                    )
+                )
+                .frame(width: size, height: size)
+        }
+        .animation(
+            .easeInOut(duration: 2.5)
+            .repeatForever(autoreverses: true),
+            value: isAnimating
+        )
+        .onAppear {
+            isAnimating = true
+        }
+    }
+}
+
+// Stats Card with gradient accent
+struct StatsCard: View {
+    let title: String
+    let value: String
+    let subtitle: String?
+    let icon: String
+    var accentColor: Color = AppColors.primary
+    var gradient: LinearGradient? = nil
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                IconCircle(
+                    icon: icon,
+                    size: 40,
+                    iconSize: 18,
+                    color: accentColor,
+                    filled: true,
+                    gradient: gradient
+                )
+                
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                Text(value)
+                    .font(AppTypography.displaySmall)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Text(title)
+                    .font(AppTypography.subhead)
+                    .foregroundColor(AppColors.textSecondary)
+                
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+            }
+        }
+        .elevatedCard()
+    }
+}
+
+// Progress ring with animation
+struct ProgressRing: View {
+    var progress: Double
+    var color: Color = AppColors.primary
+    var lineWidth: CGFloat = 8
+    var size: CGFloat = 100
+    
+    @State private var animatedProgress: Double = 0
+    
+    var body: some View {
+        ZStack {
+            // Background ring
+            Circle()
+                .stroke(color.opacity(0.15), lineWidth: lineWidth)
+            
+            // Progress ring
+            Circle()
+                .trim(from: 0, to: animatedProgress)
+                .stroke(
+                    AngularGradient(
+                        colors: [color, color.opacity(0.5), color],
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+        }
+        .frame(width: size, height: size)
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.0)) {
+                animatedProgress = progress
+            }
+        }
+        .onChange(of: progress) { _, newValue in
+            withAnimation(.easeOut(duration: 0.5)) {
+                animatedProgress = newValue
+            }
+        }
     }
 }
