@@ -106,9 +106,10 @@ MomMate/
 
 ## 📚 项目文档规范
 
-- `PRD.md`：产品需求基线文档（功能范围、验收标准、版本规划）
-- `DEVELOPMENT_GUIDELINES.md`：项目开发规范（分支、PR、质量与文档流程）
-- 强制规则：每次涉及功能/交互/数据/验收标准的改动，必须同步更新 `PRD.md`
+- `docs/product/PRD.md`：产品需求基线文档（功能范围、验收标准、版本规划）
+- `docs/process/DEVELOPMENT_GUIDELINES.md`：项目开发规范（分支、PR、质量与文档流程）
+- `docs/archive/RPD.md`：历史需求文档（归档，不再作为当前基线）
+- 强制规则：每次涉及功能/交互/数据/验收标准的改动，必须同步更新 `docs/product/PRD.md`
 
 ## 📄 许可证
 

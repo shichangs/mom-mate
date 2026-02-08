@@ -2,7 +2,7 @@
 
 - 版本：v1.0
 - 生效日期：2026-02-08
-- 适用范围：`/Users/shichangliao/Desktop/codes/MyAppStore/MomMate`
+- 适用范围：`MomMate` 项目仓库
 
 ## 1. 目标
 
@@ -40,7 +40,7 @@ docs(prd): update meal statistics acceptance criteria
 
 ## 5. PRD 强制同步规则（必遵守）
 
-凡出现以下任一类型改动，必须同步更新 `PRD.md`：
+凡出现以下任一类型改动，必须同步更新 `docs/product/PRD.md`：
 
 - 新增/删除功能
 - 交互流程变化（入口、步骤、状态、空态）
@@ -53,13 +53,13 @@ docs(prd): update meal statistics acceptance criteria
 
 提交 PR 时必须确认：
 
-- [ ] 我已评估本次改动是否影响 `PRD.md`
-- [ ] 若有影响，我已同步更新 `PRD.md`
+- [ ] 我已评估本次改动是否影响 `docs/product/PRD.md`
+- [ ] 若有影响，我已同步更新 `docs/product/PRD.md`
 - [ ] 我已在 PR 描述中写明 PRD 更新章节
 
 ### 5.2 无需更新 PRD 的情况（例外）
 
-以下纯工程性改动可不更新 `PRD.md`，但需在 PR 说明原因：
+以下纯工程性改动可不更新 `docs/product/PRD.md`，但需在 PR 说明原因：
 
 - 纯格式化（无行为变化）
 - 注释/文案错别字修正（不影响需求语义）
@@ -78,17 +78,16 @@ docs(prd): update meal statistics acceptance criteria
 
 - 功能改动至少包含手动验收路径。
 - 涉及统计/时间逻辑时，必须覆盖边界场景（跨天、空数据、补录）。
-- 发现行为变更时，应同步更新 `PRD.md` 的“功能需求”或“验收标准”章节。
+- 发现行为变更时，应同步更新 `docs/product/PRD.md` 的“功能需求”或“验收标准”章节。
 
 ## 8. 文档清单与职责
 
-- `PRD.md`：产品需求基线（功能范围、验收标准、版本规划）
-- `DEVELOPMENT_GUIDELINES.md`：开发流程与质量约束（本文档）
+- `docs/product/PRD.md`：产品需求基线（功能范围、验收标准、版本规划）
+- `docs/process/DEVELOPMENT_GUIDELINES.md`：开发流程与质量约束（本文档）
 - `README.md`：项目介绍、运行方式、目录结构
 
 ## 9. 执行机制
 
 - 代码评审默认检查 PRD 同步情况。
-- 未按规范同步 `PRD.md` 的功能性 PR 不应合并。
-- 当 `PRD.md` 与现网行为冲突时，以“先修正文档再合并代码”为默认策略。
-
+- 未按规范同步 `docs/product/PRD.md` 的功能性 PR 不应合并。
+- 当 `docs/product/PRD.md` 与现网行为冲突时，以“先修正文档再合并代码”为默认策略。
