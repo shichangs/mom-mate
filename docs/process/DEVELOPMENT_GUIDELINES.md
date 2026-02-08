@@ -38,9 +38,9 @@ docs(prd): update meal statistics acceptance criteria
 - 验证结果（截图/录屏/测试说明）
 - 文档同步说明（必须包含 PRD 更新情况）
 
-## 5. PRD 强制同步规则（必遵守）
+## 5. 文档强制同步规则（必遵守）
 
-凡出现以下任一类型改动，必须同步更新 `docs/product/PRD.md`：
+凡出现以下任一类型改动，必须同步更新对应文档：
 
 - 新增/删除功能
 - 交互流程变化（入口、步骤、状态、空态）
@@ -49,17 +49,25 @@ docs(prd): update meal statistics acceptance criteria
 - 非功能指标变化（性能、稳定性、隐私）
 - 验收标准变化
 
-### 5.1 PR 检查清单（必须勾选）
+### 5.1 变更与文档映射（必执行）
+
+- 产品功能/交互/验收变化：更新 `docs/product/PRD.md`
+- 测试步骤或回归口径变化：更新 `docs/testing/REGRESSION_CHECKLIST.md`
+- 项目使用方式、目录结构、能力说明变化：更新 `README.md` 或 `docs/README.md`
+- 代码组织、分层、技术方案变化：更新 `docs/architecture/*.md`
+- 开发流程、提交流程变化：更新 `docs/process/DEVELOPMENT_GUIDELINES.md`
+
+### 5.2 PR 检查清单（必须勾选）
 
 提交 PR 时必须确认：
 
-- [ ] 我已评估本次改动是否影响 `docs/product/PRD.md`
-- [ ] 若有影响，我已同步更新 `docs/product/PRD.md`
-- [ ] 我已在 PR 描述中写明 PRD 更新章节
+- [ ] 我已评估本次改动影响的文档范围（PRD/回归/README/架构/流程）
+- [ ] 我已同步更新所有受影响的文档（`.md`）
+- [ ] 我已在 PR 描述中写明“更新了哪些文档、对应章节/段落”
 
-### 5.2 无需更新 PRD 的情况（例外）
+### 5.3 无需更新文档的情况（例外）
 
-以下纯工程性改动可不更新 `docs/product/PRD.md`，但需在 PR 说明原因：
+以下纯工程性改动可不更新文档，但需在 PR 说明原因：
 
 - 纯格式化（无行为变化）
 - 注释/文案错别字修正（不影响需求语义）
@@ -78,7 +86,7 @@ docs(prd): update meal statistics acceptance criteria
 
 - 功能改动至少包含手动验收路径。
 - 涉及统计/时间逻辑时，必须覆盖边界场景（跨天、空数据、补录）。
-- 发现行为变更时，应同步更新 `docs/product/PRD.md` 的“功能需求”或“验收标准”章节。
+- 发现行为变更时，应至少同步更新 `docs/product/PRD.md` 与 `docs/testing/REGRESSION_CHECKLIST.md` 对应章节。
 - 合并前需通过 CI 构建检查（见 `.github/workflows/ios-ci.yml`）。
 
 ## 8. 文档清单与职责
@@ -90,6 +98,6 @@ docs(prd): update meal statistics acceptance criteria
 
 ## 9. 执行机制
 
-- 代码评审默认检查 PRD 同步情况。
-- 未按规范同步 `docs/product/PRD.md` 的功能性 PR 不应合并。
-- 当 `docs/product/PRD.md` 与现网行为冲突时，以“先修正文档再合并代码”为默认策略。
+- 代码评审默认检查文档同步情况（不仅 PRD）。
+- 未按规范同步受影响文档的功能性 PR 不应合并。
+- 当文档与当前行为冲突时，以“先修正文档再合并代码”为默认策略。

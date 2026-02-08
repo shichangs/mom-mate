@@ -201,7 +201,7 @@ struct SleepTabView: View {
 struct MealsTabView: View {
     @ObservedObject var mealRecordManager: MealRecordManager
     @State private var showingAddMeal = false
-    @State private var showingMamaRecipe = false
+    @State private var showingFoodList = false
     @State private var selectedMealType: MealType? = nil
     @AppStorage("fontSizeFactor") private var fontSizeFactor: Double = 1.0
     
@@ -219,17 +219,28 @@ struct MealsTabView: View {
                     .ignoresSafeArea()
                 
                 if mealRecordManager.mealRecords.isEmpty {
-                    EmptyStateView(
-                        icon: "fork.knife.circle",
-                        title: "还没有饮食记录",
-                        subtitle: "点击右上角添加宝宝的饮食",
-                        color: AppColors.meal
-                    )
+                    VStack(spacing: AppSpacing.lg) {
+                        EmptyStateView(
+                            icon: "fork.knife.circle",
+                            title: "还没有饮食记录",
+                            subtitle: "点击右上角添加宝宝的饮食",
+                            color: AppColors.meal
+                        )
+                        
+                        FoodListEntryCard {
+                            showingFoodList = true
+                        }
+                        .padding(.horizontal, AppSpacing.lg)
+                    }
                 } else {
                     ScrollView {
                         VStack(spacing: AppSpacing.xl) {
                             // 今日概览
                             TodaySummaryCard(records: mealRecordManager.mealRecordsForToday())
+
+                            FoodListEntryCard {
+                                showingFoodList = true
+                            }
                             
                             // 餐次筛选
                             MealFilterBar(selectedType: $selectedMealType)
@@ -263,8 +274,8 @@ struct MealsTabView: View {
                         .foregroundColor(AppColors.textPrimary)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { showingMamaRecipe = true }) {
-                        Image(systemName: "book.fill")
+                    Button(action: { showingFoodList = true }) {
+                        Image(systemName: "list.bullet.circle.fill")
                             .font(.system(size: 18))
                             .foregroundColor(AppColors.meal)
                     }
@@ -280,113 +291,133 @@ struct MealsTabView: View {
             .sheet(isPresented: $showingAddMeal) {
                 QuickAddMealSheet(mealRecordManager: mealRecordManager)
             }
-            .sheet(isPresented: $showingMamaRecipe) {
-                MamaRecipeView()
+            .sheet(isPresented: $showingFoodList) {
+                FoodListView()
             }
             .id(fontSizeFactor)
         }
     }
 }
 
-// MARK: - 妈妈食谱视图
-struct MamaRecipeView: View {
+// MARK: - 食物清单入口卡片
+struct FoodListEntryCard: View {
+    var action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: AppSpacing.md) {
+                IconCircle(
+                    icon: "list.bullet",
+                    size: 38,
+                    iconSize: 16,
+                    color: AppColors.meal
+                )
+                
+                VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                    Text("食物清单")
+                        .font(AppTypography.calloutMedium)
+                        .foregroundColor(AppColors.textPrimary)
+                    Text("统一管理所有食物，支持删除和排序")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            .padding(AppSpacing.md)
+            .background(AppColors.surface)
+            .cornerRadius(AppRadius.lg)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppRadius.lg)
+                    .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+enum FoodCatalogStore {
+    static let key = "foodCatalog"
+    static let legacyKey = "customFoods"
+    static let defaultFoods = [
+        "米糊", "南瓜泥", "胡萝卜泥", "苹果泥", "香蕉泥",
+        "土豆泥", "鸡蛋", "牛奶", "酸奶", "面条"
+    ]
+    
+    static func load(from data: Data) -> [String] {
+        if let decoded = try? JSONDecoder().decode([String].self, from: data), !decoded.isEmpty {
+            return normalized(decoded)
+        }
+        
+        let legacy = (UserDefaults.standard.data(forKey: legacyKey)).flatMap {
+            try? JSONDecoder().decode([String].self, from: $0)
+        } ?? []
+        
+        return normalized(defaultFoods + legacy)
+    }
+    
+    static func save(_ foods: [String]) -> Data? {
+        try? JSONEncoder().encode(normalized(foods))
+    }
+    
+    private static func normalized(_ foods: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for item in foods {
+            let trimmed = item.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || seen.contains(trimmed) {
+                continue
+            }
+            seen.insert(trimmed)
+            result.append(trimmed)
+        }
+        return result
+    }
+}
+
+// MARK: - 食物清单视图
+struct FoodListView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("customFoods") private var customFoodsData: Data = Data()
+    @AppStorage(FoodCatalogStore.key) private var foodCatalogData: Data = Data()
     @State private var newFoodName: String = ""
-    
-    private var customFoods: [String] {
-        get {
-            (try? JSONDecoder().decode([String].self, from: customFoodsData)) ?? []
-        }
-    }
-    
-    private func saveCustomFoods(_ foods: [String]) {
-        if let data = try? JSONEncoder().encode(foods) {
-            customFoodsData = data
-        }
-    }
+    @State private var foods: [String] = []
     
     var body: some View {
         NavigationView {
-            ZStack {
-                AppColors.background
-                    .ignoresSafeArea()
+            List {
+                Section {
+                    Text("统一管理默认和自定义食物；支持删除和拖拽排序。")
+                        .font(AppTypography.subhead)
+                        .foregroundColor(AppColors.textSecondary)
+                }
                 
-                ScrollView {
-                    VStack(spacing: AppSpacing.xl) {
-                        // 说明
-                        Text("在这里添加宝宝常吃的食物，添加饮食记录时可以快速选择。")
-                            .font(AppTypography.subhead)
-                            .foregroundColor(AppColors.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, AppSpacing.lg)
-                        
-                        // 添加新食物
-                        VStack(spacing: AppSpacing.md) {
-                            Text("添加新食物")
-                                .font(AppTypography.subheadMedium)
-                                .foregroundColor(AppColors.textSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            
-                            HStack {
-                                TextField("食物名称", text: $newFoodName)
-                                    .textFieldStyle(.roundedBorder)
-                                
-                                Button(action: addFood) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundColor(AppColors.meal)
-                                }
-                                .disabled(newFoodName.trimmingCharacters(in: .whitespaces).isEmpty)
-                            }
-                        }
-                        .padding(.horizontal, AppSpacing.lg)
-                        
-                        // 已添加的食物列表
-                        VStack(spacing: AppSpacing.md) {
-                            Text("我的食物列表 (\(customFoods.count))")
-                                .font(AppTypography.subheadMedium)
-                                .foregroundColor(AppColors.textSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            
-                            if customFoods.isEmpty {
-                                Text("还没有添加任何食物")
-                                    .font(AppTypography.body)
-                                    .foregroundColor(AppColors.textTertiary)
-                                    .padding(.vertical, AppSpacing.xl)
-                            } else {
-                                FlowLayout(spacing: AppSpacing.sm) {
-                                    ForEach(customFoods, id: \.self) { food in
-                                        HStack(spacing: AppSpacing.xs) {
-                                            Text(food)
-                                                .font(AppTypography.subhead)
-                                            
-                                            Button(action: { removeFood(food) }) {
-                                                Image(systemName: "xmark.circle.fill")
-                                                    .font(.system(size: 14))
-                                                    .foregroundColor(AppColors.textTertiary)
-                                            }
-                                        }
-                                        .padding(.horizontal, AppSpacing.md)
-                                        .padding(.vertical, AppSpacing.sm)
-                                        .background(AppColors.surface)
-                                        .cornerRadius(AppRadius.full)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: AppRadius.full)
-                                                .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, AppSpacing.lg)
+                Section("添加新食物") {
+                    HStack {
+                        TextField("食物名称", text: $newFoodName)
+                        Button("添加", action: addFood)
+                            .disabled(newFoodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    .padding(.vertical, AppSpacing.xl)
+                }
+                
+                Section("食物列表 (\(foods.count))") {
+                    ForEach(foods, id: \.self) { food in
+                        Text(food)
+                            .font(AppTypography.body)
+                    }
+                    .onDelete(perform: removeFoods)
+                    .onMove(perform: moveFoods)
                 }
             }
-            .navigationTitle("妈妈食谱")
+            .navigationTitle("食物清单")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    EditButton()
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("完成") {
                         dismiss()
@@ -394,24 +425,37 @@ struct MamaRecipeView: View {
                     .fontWeight(.semibold)
                 }
             }
+            .onAppear {
+                foods = FoodCatalogStore.load(from: foodCatalogData)
+                persistFoods()
+            }
         }
     }
     
     private func addFood() {
-        let trimmed = newFoodName.trimmingCharacters(in: .whitespaces)
+        let trimmed = newFoodName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        var foods = customFoods
         if !foods.contains(trimmed) {
             foods.append(trimmed)
-            saveCustomFoods(foods)
+            persistFoods()
         }
         newFoodName = ""
     }
     
-    private func removeFood(_ food: String) {
-        var foods = customFoods
-        foods.removeAll { $0 == food }
-        saveCustomFoods(foods)
+    private func removeFoods(at offsets: IndexSet) {
+        foods.remove(atOffsets: offsets)
+        persistFoods()
+    }
+    
+    private func moveFoods(from source: IndexSet, to destination: Int) {
+        foods.move(fromOffsets: source, toOffset: destination)
+        persistFoods()
+    }
+    
+    private func persistFoods() {
+        if let data = FoodCatalogStore.save(foods) {
+            foodCatalogData = data
+        }
     }
 }
 
@@ -1214,30 +1258,10 @@ struct QuickAddMealSheet: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedMealType: MealType = .snack
     @State private var selectedFoods: Set<String> = []
-    @AppStorage("customFoods") private var customFoodsData: Data = Data()
-    
-    private let defaultFoods = [
-        "米糊", "南瓜泥", "胡萝卜泥", "苹果泥", "香蕉泥",
-        "土豆泥", "鸡蛋", "牛奶", "酸奶", "面条"
-    ]
-    
-    private var customFoods: [String] {
-        (try? JSONDecoder().decode([String].self, from: customFoodsData)) ?? []
-    }
+    @AppStorage(FoodCatalogStore.key) private var foodCatalogData: Data = Data()
     
     private var availableFoods: [String] {
-        var seen = Set<String>()
-        var merged: [String] = []
-        
-        for food in defaultFoods + customFoods {
-            let trimmed = food.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty || seen.contains(trimmed) {
-                continue
-            }
-            seen.insert(trimmed)
-            merged.append(trimmed)
-        }
-        return merged
+        FoodCatalogStore.load(from: foodCatalogData)
     }
     
     var body: some View {
@@ -1287,7 +1311,7 @@ struct QuickAddMealSheet: View {
                             }
                         }
                     }
-                    
+
                     // 保存按钮
                     Button(action: saveMeal) {
                         Text("保存")

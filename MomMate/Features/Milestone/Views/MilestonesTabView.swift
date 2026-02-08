@@ -7,6 +7,19 @@
 
 import SwiftUI
 
+private func milestoneCategoryColor(_ category: MilestoneCategory) -> Color {
+    switch category.color {
+    case "yellow": return Color(hex: "FFCC00")
+    case "blue": return AppColors.primary
+    case "purple": return AppColors.milestone
+    case "pink": return Color(hex: "FF2D55")
+    case "orange": return AppColors.warning
+    case "indigo": return Color(hex: "5856D6")
+    case "red": return AppColors.secondary
+    default: return AppColors.textSecondary
+    }
+}
+
 struct MilestonesTabView: View {
     @ObservedObject var milestoneManager: MilestoneManager
     @State private var showingAddMilestone = false
@@ -14,15 +27,15 @@ struct MilestonesTabView: View {
     @State private var selectedCategory: MilestoneCategory? = nil
     
     // 默认里程碑选项
-    let quickMilestones: [(category: MilestoneCategory, title: String, emoji: String)] = [
-        (.firstSmile, "第一次微笑", "😊"),
-        (.firstRoll, "第一次翻身", "🔄"),
-        (.firstSit, "第一次坐", "🪑"),
-        (.firstCrawl, "第一次爬", "🐛"),
-        (.firstStand, "第一次站", "🧍"),
-        (.firstWalk, "第一次走", "🚶"),
-        (.firstWord, "第一次说话", "💬"),
-        (.firstTooth, "第一颗牙", "🦷")
+    let quickMilestones: [(category: MilestoneCategory, title: String)] = [
+        (.firstSmile, "第一次微笑"),
+        (.firstRoll, "第一次翻身"),
+        (.firstSit, "第一次坐"),
+        (.firstCrawl, "第一次爬"),
+        (.firstStand, "第一次站"),
+        (.firstWalk, "第一次走"),
+        (.firstWord, "第一次说话"),
+        (.firstTooth, "第一颗牙")
     ]
     
     var filteredMilestones: [Milestone] {
@@ -153,7 +166,7 @@ struct EmptyMilestoneView: View {
 
 // MARK: - 快捷添加区块
 struct QuickAddSection: View {
-    let milestones: [(category: MilestoneCategory, title: String, emoji: String)]
+    let milestones: [(category: MilestoneCategory, title: String)]
     let onAdd: (MilestoneCategory, String) -> Void
     
     var body: some View {
@@ -168,33 +181,20 @@ struct QuickAddSection: View {
             ], spacing: AppSpacing.sm) {
                 ForEach(milestones, id: \.title) { item in
                     QuickMilestoneCard(
-                        emoji: item.emoji,
+                        category: item.category,
                         title: item.title,
-                        color: categoryColor(item.category),
+                        color: milestoneCategoryColor(item.category),
                         action: { onAdd(item.category, item.title) }
                     )
                 }
             }
         }
     }
-    
-    private func categoryColor(_ category: MilestoneCategory) -> Color {
-        switch category.color {
-        case "yellow": return Color(hex: "FFCC00")
-        case "blue": return AppColors.primary
-        case "purple": return AppColors.milestone
-        case "pink": return Color(hex: "FF2D55")
-        case "orange": return AppColors.warning
-        case "indigo": return Color(hex: "5856D6")
-        case "red": return AppColors.secondary
-        default: return AppColors.textSecondary
-        }
-    }
 }
 
 // MARK: - 快捷里程碑卡片
 struct QuickMilestoneCard: View {
-    let emoji: String
+    let category: MilestoneCategory
     let title: String
     let color: Color
     let action: () -> Void
@@ -202,8 +202,14 @@ struct QuickMilestoneCard: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: AppSpacing.sm) {
-                Text(emoji)
-                    .font(.system(size: 28))
+                ZStack {
+                    RoundedRectangle(cornerRadius: AppRadius.sm)
+                        .fill(color.opacity(0.14))
+                        .frame(width: 34, height: 34)
+                    Image(systemName: category.icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(color)
+                }
                 
                 Text(title)
                     .font(AppTypography.subheadMedium)
@@ -225,7 +231,7 @@ struct QuickMilestoneCard: View {
 
 // MARK: - 快捷添加卡片 (有记录时)
 struct QuickAddCard: View {
-    let milestones: [(category: MilestoneCategory, title: String, emoji: String)]
+    let milestones: [(category: MilestoneCategory, title: String)]
     let onAdd: (MilestoneCategory, String) -> Void
     
     var body: some View {
@@ -239,7 +245,14 @@ struct QuickAddCard: View {
                     ForEach(milestones, id: \.title) { item in
                         Button(action: { onAdd(item.category, item.title) }) {
                             HStack(spacing: AppSpacing.xs) {
-                                Text(item.emoji)
+                                ZStack {
+                                    Circle()
+                                        .fill(milestoneCategoryColor(item.category).opacity(0.14))
+                                        .frame(width: 22, height: 22)
+                                    Image(systemName: item.category.icon)
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(milestoneCategoryColor(item.category))
+                                }
                                 Text(item.title)
                                     .font(AppTypography.footnote)
                             }
@@ -284,7 +297,7 @@ struct CategoryFilterBar: View {
                     FilterChip(
                         title: category.rawValue,
                         isSelected: selectedCategory == category,
-                        color: categoryColor(category)
+                        color: milestoneCategoryColor(category)
                     ) {
                         withAnimation(.spring(response: 0.3)) {
                             selectedCategory = category
@@ -292,19 +305,6 @@ struct CategoryFilterBar: View {
                     }
                 }
             }
-        }
-    }
-    
-    private func categoryColor(_ category: MilestoneCategory) -> Color {
-        switch category.color {
-        case "yellow": return Color(hex: "FFCC00")
-        case "blue": return AppColors.primary
-        case "purple": return AppColors.milestone
-        case "pink": return Color(hex: "FF2D55")
-        case "orange": return AppColors.warning
-        case "indigo": return Color(hex: "5856D6")
-        case "red": return AppColors.secondary
-        default: return AppColors.textSecondary
         }
     }
 }
@@ -368,7 +368,7 @@ struct MilestoneTimelineItem: View {
             // 时间线
             VStack(spacing: 0) {
                 Circle()
-                    .fill(categoryColor(milestone.category))
+                    .fill(milestoneCategoryColor(milestone.category))
                     .frame(width: 12, height: 12)
                 
                 if !isLast {
@@ -387,7 +387,7 @@ struct MilestoneTimelineItem: View {
                         icon: milestone.category.icon,
                         size: 44,
                         iconSize: 20,
-                        color: categoryColor(milestone.category)
+                        color: milestoneCategoryColor(milestone.category)
                     )
                     
                     VStack(alignment: .leading, spacing: AppSpacing.xxs) {
@@ -420,19 +420,6 @@ struct MilestoneTimelineItem: View {
             .buttonStyle(.plain)
         }
         .padding(.bottom, isLast ? 0 : AppSpacing.md)
-    }
-    
-    private func categoryColor(_ category: MilestoneCategory) -> Color {
-        switch category.color {
-        case "yellow": return Color(hex: "FFCC00")
-        case "blue": return AppColors.primary
-        case "purple": return AppColors.milestone
-        case "pink": return Color(hex: "FF2D55")
-        case "orange": return AppColors.warning
-        case "indigo": return Color(hex: "5856D6")
-        case "red": return AppColors.secondary
-        default: return AppColors.textSecondary
-        }
     }
 }
 
