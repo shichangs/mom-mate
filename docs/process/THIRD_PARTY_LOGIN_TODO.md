@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-- Apple 登录：已接入并可在 App 内触发登录。
+- Apple 登录：入口已接入；受 Personal Team 限制，真实 Sign in with Apple 暂不可用（可使用 Debug Mock 登录联调流程）。
 - Google 登录：已接入按钮与错误提示，尚未完成平台参数配置与 SDK 打通。
 - 微信登录：已接入按钮与错误提示，尚未完成平台参数配置与 SDK 打通。
 
