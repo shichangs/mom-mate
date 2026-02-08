@@ -1448,6 +1448,8 @@ struct SettingsView: View {
     @AppStorage("fontSizeFactor") private var fontSizeFactor: Double = 1.0
     @AppStorage("cloudSyncEnabled") private var cloudSyncEnabled: Bool = true
     @Environment(\.dismiss) var dismiss
+    @StateObject private var authManager = AuthManager()
+    @State private var showingAuthSheet = false
     
     var body: some View {
         NavigationView {
@@ -1457,6 +1459,45 @@ struct SettingsView: View {
                 
                 ScrollView {
                     VStack(spacing: AppSpacing.xl) {
+                        // 账号与同步入口
+                        VStack(spacing: AppSpacing.md) {
+                            Text("账号")
+                                .font(AppTypography.subheadMedium)
+                                .foregroundColor(AppColors.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Button {
+                                showingAuthSheet = true
+                            } label: {
+                                HStack(spacing: AppSpacing.md) {
+                                    Image(systemName: authManager.syncButtonIcon)
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(authManager.syncButtonColor)
+                                        .frame(width: 28)
+                                    
+                                    VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                                        Text(authManager.syncButtonTitle)
+                                            .font(AppTypography.bodyMedium)
+                                            .foregroundColor(AppColors.textPrimary)
+                                        Text("管理第三方登录与同步状态")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textSecondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(AppColors.textTertiary)
+                                }
+                                .padding(AppSpacing.lg)
+                                .background(AppColors.surface)
+                                .cornerRadius(AppRadius.lg)
+                                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                            }
+                        }
+                        .padding(.horizontal, AppSpacing.lg)
+                        
                         // 云端同步设置
                         VStack(spacing: AppSpacing.md) {
                             Text("数据同步")
@@ -1574,6 +1615,9 @@ struct SettingsView: View {
                     }
                     .fontWeight(.semibold)
                 }
+            }
+            .sheet(isPresented: $showingAuthSheet) {
+                AuthView(authManager: authManager, showingSheet: $showingAuthSheet)
             }
         }
     }

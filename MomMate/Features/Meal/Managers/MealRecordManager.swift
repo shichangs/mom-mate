@@ -12,8 +12,10 @@ class MealRecordManager: ObservableObject {
     
     private let mealRecordsKey = "MealRecords"
     private let cloudSyncEnabledKey = "cloudSyncEnabled"
+    private let syncAuthorizedKey = "sync.auth.enabled.v1"
     private let cloudStore = NSUbiquitousKeyValueStore.default
-    private var lastKnownCloudSyncEnabled = UserDefaults.standard.object(forKey: "cloudSyncEnabled") as? Bool ?? true
+    private var lastKnownCloudSyncEnabled = (UserDefaults.standard.object(forKey: "cloudSyncEnabled") as? Bool ?? true)
+        && UserDefaults.standard.bool(forKey: "sync.auth.enabled.v1")
     
     init() {
         setupObservers()
@@ -86,7 +88,9 @@ class MealRecordManager: ObservableObject {
     }
     
     private var isCloudSyncEnabled: Bool {
-        UserDefaults.standard.object(forKey: cloudSyncEnabledKey) as? Bool ?? true
+        let cloudSyncEnabled = UserDefaults.standard.object(forKey: cloudSyncEnabledKey) as? Bool ?? true
+        let syncAuthorized = UserDefaults.standard.bool(forKey: syncAuthorizedKey)
+        return cloudSyncEnabled && syncAuthorized
     }
     
     private func pushCurrentRecordsToCloud() {
