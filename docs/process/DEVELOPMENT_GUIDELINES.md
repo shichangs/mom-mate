@@ -79,11 +79,13 @@ docs(prd): update meal statistics acceptance criteria
 - 功能改动至少包含手动验收路径。
 - 涉及统计/时间逻辑时，必须覆盖边界场景（跨天、空数据、补录）。
 - 发现行为变更时，应同步更新 `docs/product/PRD.md` 的“功能需求”或“验收标准”章节。
+- 合并前需通过 CI 构建检查（见 `.github/workflows/ios-ci.yml`）。
 
 ## 8. 文档清单与职责
 
 - `docs/product/PRD.md`：产品需求基线（功能范围、验收标准、版本规划）
 - `docs/process/DEVELOPMENT_GUIDELINES.md`：开发流程与质量约束（本文档）
+- `docs/testing/REGRESSION_CHECKLIST.md`：回归测试清单
 - `README.md`：项目介绍、运行方式、目录结构
 
 ## 9. 执行机制
