@@ -35,7 +35,7 @@ struct MilestonesTabView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                AppColors.backgroundGradient
+                AppColors.background
                     .ignoresSafeArea()
                 
                 if milestoneManager.milestones.isEmpty {
@@ -86,8 +86,13 @@ struct MilestonesTabView: View {
                 }
             }
             .navigationTitle("成长里程碑")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("成长里程碑")
+                        .font(AppTypography.title3)
+                        .foregroundColor(AppColors.textPrimary)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddMilestone = true }) {
                         Image(systemName: "plus.circle.fill")
@@ -210,11 +215,9 @@ struct QuickMilestoneCard: View {
             .padding(AppSpacing.md)
             .background(AppColors.surface)
             .cornerRadius(AppRadius.lg)
-            .shadow(
-                color: AppShadow.small.color,
-                radius: AppShadow.small.radius,
-                x: AppShadow.small.x,
-                y: AppShadow.small.y
+            .overlay(
+                RoundedRectangle(cornerRadius: AppRadius.lg)
+                    .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
             )
         }
     }
@@ -245,11 +248,9 @@ struct QuickAddCard: View {
                             .padding(.vertical, AppSpacing.xs)
                             .background(AppColors.surface)
                             .cornerRadius(AppRadius.full)
-                            .shadow(
-                                color: AppShadow.small.color,
-                                radius: AppShadow.small.radius,
-                                x: AppShadow.small.x,
-                                y: AppShadow.small.y
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppRadius.full)
+                                    .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
                             )
                         }
                     }

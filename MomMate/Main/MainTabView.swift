@@ -68,14 +68,56 @@ struct SleepTabView: View {
     
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
     
+    private var todaySleepDuration: TimeInterval {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
+        return recordManager.completedRecords
+            .filter { record in
+                guard let wakeTime = record.wakeTime else { return false }
+                return wakeTime >= today && wakeTime < tomorrow
+            }
+            .compactMap(\.duration)
+            .reduce(0, +)
+    }
+    
+    private var yesterdaySleepDuration: TimeInterval {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+        return recordManager.completedRecords
+            .filter { record in
+                guard let wakeTime = record.wakeTime else { return false }
+                return wakeTime >= yesterday && wakeTime < today
+            }
+            .compactMap(\.duration)
+            .reduce(0, +)
+    }
+    
+    private var todaySleepCount: Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
+        return recordManager.completedRecords.filter { record in
+            guard let wakeTime = record.wakeTime else { return false }
+            return wakeTime >= today && wakeTime < tomorrow
+        }.count
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {
-                AppColors.backgroundGradient
+                AppColors.background
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: AppSpacing.xl) {
+                    VStack(spacing: AppSpacing.lg) {
+                        EmotionalDailySummaryCard(
+                            todayDuration: todaySleepDuration,
+                            yesterdayDuration: yesterdaySleepDuration,
+                            sleepCount: todaySleepCount
+                        )
+                        
                         // 主状态卡片
                         if let currentRecord = recordManager.currentSleepRecord {
                             SleepingStatusCard(
@@ -111,14 +153,19 @@ struct SleepTabView: View {
                             )
                         }
                     }
-                    .padding(.horizontal, AppSpacing.lg)
-                    .padding(.top, AppSpacing.md)
-                    .padding(.bottom, AppSpacing.xxl)
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.top, AppSpacing.sm)
+                    .padding(.bottom, AppSpacing.xl)
                 }
             }
             .navigationTitle("睡眠")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("睡眠")
+                        .font(AppTypography.title3)
+                        .foregroundColor(AppColors.textPrimary)
+                }
                 ToolbarItems(showingSettings: $showingSettings, showingNotes: $showingNotes)
             }
             .id(fontSizeFactor) // 强制重绘以更新字体大小
@@ -168,7 +215,7 @@ struct MealsTabView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                AppColors.backgroundGradient
+                AppColors.background
                     .ignoresSafeArea()
                 
                 if mealRecordManager.mealRecords.isEmpty {
@@ -208,8 +255,13 @@ struct MealsTabView: View {
                 }
             }
             .navigationTitle("饮食")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("饮食")
+                        .font(AppTypography.title3)
+                        .foregroundColor(AppColors.textPrimary)
+                }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { showingMamaRecipe = true }) {
                         Image(systemName: "book.fill")
@@ -257,7 +309,7 @@ struct MamaRecipeView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                AppColors.backgroundGradient
+                AppColors.background
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -319,7 +371,10 @@ struct MamaRecipeView: View {
                                         .padding(.vertical, AppSpacing.sm)
                                         .background(AppColors.surface)
                                         .cornerRadius(AppRadius.full)
-                                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: AppRadius.full)
+                                                .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+                                        )
                                     }
                                 }
                             }
@@ -375,7 +430,7 @@ struct StatisticsTabView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                AppColors.backgroundGradient
+                AppColors.background
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -384,6 +439,13 @@ struct StatisticsTabView: View {
                         CustomSegmentedControl(selection: $statisticsMode)
                             .padding(.horizontal, AppSpacing.lg)
                             .padding(.top, AppSpacing.md)
+                        
+                        InsightOverviewRow(
+                            mode: statisticsMode,
+                            sleepRecords: recordManager.completedRecords,
+                            mealRecords: mealRecordManager.mealRecords
+                        )
+                        .padding(.horizontal, AppSpacing.lg)
                         
                         if statisticsMode == .sleep {
                             SleepPreviewStats(recordManager: recordManager)
@@ -395,9 +457,101 @@ struct StatisticsTabView: View {
                 }
             }
             .navigationTitle("统计分析")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("统计分析")
+                        .font(AppTypography.title3)
+                        .foregroundColor(AppColors.textPrimary)
+                }
+            }
             .id(fontSizeFactor)
         }
+    }
+}
+
+struct InsightOverviewRow: View {
+    let mode: StatisticsTabView.StatisticsMode
+    let sleepRecords: [SleepRecord]
+    let mealRecords: [MealRecord]
+    
+    private var cards: [(String, String, String)] {
+        if mode == .sleep {
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+            let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
+            
+            let todayDuration = sleepRecords.filter { record in
+                guard let wakeTime = record.wakeTime else { return false }
+                return wakeTime >= today && wakeTime < tomorrow
+            }.compactMap(\.duration).reduce(0, +)
+            
+            let yesterdayDuration = sleepRecords.filter { record in
+                guard let wakeTime = record.wakeTime else { return false }
+                return wakeTime >= yesterday && wakeTime < today
+            }.compactMap(\.duration).reduce(0, +)
+            
+            let delta = (todayDuration - yesterdayDuration) / 3600
+            let trend = delta == 0 ? "持平" : (delta > 0 ? "+\(Int(delta))h" : "\(Int(delta))h")
+            
+            return [
+                ("今日睡眠", formatDuration(todayDuration), "醒来记录汇总"),
+                ("昨日对比", trend, "以睡醒当日归属"),
+                ("记录次数", "\(sleepRecords.count)", "累计有效睡眠")
+            ]
+        }
+        
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
+        
+        let todayMeals = mealRecords.filter { $0.date >= today && $0.date < tomorrow }
+        let average = Double(mealRecords.count) / 7.0
+        let topType = MealType.allCases
+            .map { type in (type.rawValue, mealRecords.filter { $0.mealType == type }.count) }
+            .max(by: { $0.1 < $1.1 })?.0 ?? "暂无"
+        
+        return [
+            ("今日饮食", "\(todayMeals.count) 次", "自然日统计"),
+            ("近7日均值", String(format: "%.1f 次/天", average), "粗粒度趋势"),
+            ("最高类型", topType, "累计出现最多")
+        ]
+    }
+    
+    var body: some View {
+        HStack(spacing: AppSpacing.sm) {
+            ForEach(cards, id: \.0) { item in
+                VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                    Text(item.0)
+                        .font(AppTypography.captionMedium)
+                        .foregroundColor(AppColors.textSecondary)
+                    Text(item.1)
+                        .font(AppTypography.title3)
+                        .foregroundColor(AppColors.textPrimary)
+                    Text(item.2)
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(AppSpacing.sm)
+                .background(AppColors.surface)
+                .cornerRadius(AppRadius.md)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppRadius.md)
+                        .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+                )
+            }
+        }
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = (Int(duration) % 3600) / 60
+        if hours > 0 {
+            return "\(hours)h\(minutes)m"
+        }
+        return "\(minutes)m"
     }
 }
 
@@ -445,7 +599,7 @@ struct SleepPreviewStats: View {
     }
     
     var body: some View {
-        VStack(spacing: AppSpacing.lg) {
+        VStack(spacing: AppSpacing.md) {
             // 周期选择器
             Picker("周期", selection: $selectedPeriod) {
                 ForEach(PeriodType.allCases, id: \.self) { period in
@@ -453,11 +607,11 @@ struct SleepPreviewStats: View {
                 }
             }
             .pickerStyle(.segmented)
-            .padding(.horizontal, AppSpacing.lg)
+            .padding(.horizontal, AppSpacing.md)
             
             // 主要统计数据
             VStack(spacing: AppSpacing.md) {
-                HStack(spacing: AppSpacing.lg) {
+                HStack(spacing: AppSpacing.md) {
                     // 平均睡眠时长
                     VStack(spacing: AppSpacing.xs) {
                         Text(formatDuration(averageDuration))
@@ -470,7 +624,7 @@ struct SleepPreviewStats: View {
                     .frame(maxWidth: .infinity)
                     
                     Divider()
-                        .frame(height: 50)
+                        .frame(height: 40)
                     
                     // 睡眠次数
                     VStack(spacing: AppSpacing.xs) {
@@ -485,7 +639,7 @@ struct SleepPreviewStats: View {
                 }
             }
             .glassCard()
-            .padding(.horizontal, AppSpacing.lg)
+            .padding(.horizontal, AppSpacing.md)
             
             // 趋势图表
             if !statistics.isEmpty {
@@ -493,7 +647,7 @@ struct SleepPreviewStats: View {
                     Text("睡眠趋势")
                         .font(AppTypography.title3)
                         .foregroundColor(AppColors.textPrimary)
-                        .padding(.horizontal, AppSpacing.lg)
+                        .padding(.horizontal, AppSpacing.md)
                     
                     GeometryReader { geometry in
                         let data = SleepStatisticsManager.shared.chartData(from: statistics)
@@ -521,11 +675,11 @@ struct SleepPreviewStats: View {
                             }
                         }
                     }
-                    .frame(height: 150)
-                    .padding(.horizontal, AppSpacing.lg)
+                    .frame(height: 132)
+                    .padding(.horizontal, AppSpacing.md)
                 }
-                .glassCard(padding: AppSpacing.md)
-                .padding(.horizontal, AppSpacing.lg)
+                .glassCard(padding: AppSpacing.sm)
+                .padding(.horizontal, AppSpacing.md)
             }
         }
     }
@@ -538,6 +692,56 @@ struct SleepPreviewStats: View {
         } else {
             return "\(minutes)m"
         }
+    }
+}
+
+struct EmotionalDailySummaryCard: View {
+    let todayDuration: TimeInterval
+    let yesterdayDuration: TimeInterval
+    let sleepCount: Int
+    
+    private var deltaText: String {
+        let delta = (todayDuration - yesterdayDuration) / 3600
+        if delta == 0 { return "与昨天持平" }
+        return delta > 0 ? "比昨天多 \(Int(delta)) 小时" : "比昨天少 \(abs(Int(delta))) 小时"
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            Text("今日睡眠状态")
+                .font(AppTypography.captionMedium)
+                .foregroundColor(.white.opacity(0.85))
+            
+            HStack(alignment: .lastTextBaseline, spacing: AppSpacing.xs) {
+                Text(formatDuration(todayDuration))
+                    .font(AppTypography.title1)
+                    .foregroundColor(.white)
+                Text("已记录 \(sleepCount) 次")
+                    .font(AppTypography.caption)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            
+            Text(deltaText)
+                .font(AppTypography.footnote)
+                .foregroundColor(.white.opacity(0.8))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(AppSpacing.md)
+        .background(AppColors.primary)
+        .cornerRadius(AppRadius.lg)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.lg)
+                .stroke(AppColors.primary.opacity(0.15), lineWidth: 1)
+        )
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = (Int(duration) % 3600) / 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
     }
 }
 
@@ -568,7 +772,10 @@ struct CustomSegmentedControl<T: RawRepresentable & CaseIterable>: View where T.
         .padding(AppSpacing.xxs)
         .background(AppColors.surface)
         .cornerRadius(AppRadius.md)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.md)
+                .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+        )
     }
 }
 
@@ -604,7 +811,7 @@ struct TodaySummaryCard: View {
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
                     Text("今日饮食")
                         .font(AppTypography.title2)
-                        .foregroundStyle(AppColors.mealGradient)
+                        .foregroundColor(AppColors.meal)
                     
                     Text("\(records.count) 次记录")
                         .font(AppTypography.callout)
@@ -740,8 +947,10 @@ struct MealRecordCardView: View {
             RoundedRectangle(cornerRadius: AppRadius.lg)
                 .fill(AppColors.surface)
         )
-        .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.lg)
+                .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+        )
     }
 }
 
@@ -757,22 +966,23 @@ struct SleepingStatusCard: View {
     }
     
     var body: some View {
-        VStack(spacing: AppSpacing.xl) {
+        VStack(spacing: AppSpacing.lg) {
             // 睡眠指示器 - 使用新的呼吸动画
             ZStack {
-                BreathingCircle(color: AppColors.sleep, size: 120)
+                Circle()
+                    .fill(AppColors.sleep)
+                    .frame(width: 96, height: 96)
                 
                 Image(systemName: "moon.zzz.fill")
-                    .font(.system(size: 48, weight: .medium))
+                    .font(.system(size: 38, weight: .medium))
                     .foregroundColor(.white)
-                    .shadow(color: AppColors.sleep.opacity(0.5), radius: 10, x: 0, y: 4)
             }
-            .frame(height: 180)
+            .frame(height: 136)
             
             VStack(spacing: AppSpacing.xs) {
                 Text(formatDuration(sleepDuration))
-                    .font(AppTypography.timer)
-                    .foregroundStyle(AppColors.sleepGradient)
+                    .font(AppTypography.timerSmall)
+                    .foregroundColor(AppColors.sleep)
                 
                 Text("宝宝正在睡觉")
                     .font(AppTypography.callout)
@@ -790,11 +1000,7 @@ struct SleepingStatusCard: View {
                         Text("记录醒来")
                     }
                 }
-                .buttonStyle(GradientButtonStyle(gradient: LinearGradient(
-                    colors: [AppColors.accent, AppColors.accent.opacity(0.8)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )))
+                .buttonStyle(PrimaryButtonStyle(color: AppColors.accent))
                 
                 Button(action: onWakeUpCustom) {
                     Text("选择其他时间")
@@ -804,8 +1010,8 @@ struct SleepingStatusCard: View {
             }
             .padding(.top, AppSpacing.sm)
         }
-        .padding(.vertical, AppSpacing.xxl)
-        .padding(.horizontal, AppSpacing.lg)
+        .padding(.vertical, AppSpacing.xl)
+        .padding(.horizontal, AppSpacing.md)
         .glassCard(padding: 0)
     }
     
@@ -827,44 +1033,23 @@ struct SleepingStatusCard: View {
 struct AwakeStatusCard: View {
     let onSleep: () -> Void
     let onSleepCustom: () -> Void
-    @State private var isAnimating = false
     
     var body: some View {
-        VStack(spacing: AppSpacing.xl) {
+        VStack(spacing: AppSpacing.lg) {
             ZStack {
-                // 光晕效果
                 Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [AppColors.awake.opacity(0.3), AppColors.awake.opacity(0)],
-                            center: .center,
-                            startRadius: 40,
-                            endRadius: 90
-                        )
-                    )
-                    .frame(width: 180, height: 180)
-                    .scaleEffect(isAnimating ? 1.1 : 1.0)
-                
-                Circle()
-                    .fill(AppColors.awakeGradient)
-                    .frame(width: 100, height: 100)
-                    .shadow(color: AppColors.awake.opacity(0.4), radius: 20, x: 0, y: 10)
+                    .fill(AppColors.awake)
+                    .frame(width: 84, height: 84)
                 
                 Image(systemName: "sun.max.fill")
-                    .font(.system(size: 48, weight: .medium))
+                    .font(.system(size: 36, weight: .medium))
                     .foregroundColor(.white)
-                    .rotationEffect(.degrees(isAnimating ? 10 : -10))
-            }
-            .onAppear {
-                withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
-                    isAnimating = true
-                }
             }
             
             VStack(spacing: AppSpacing.xs) {
                 Text("宝宝醒着")
-                    .font(AppTypography.title1)
-                    .foregroundStyle(AppColors.awakeGradient)
+                    .font(AppTypography.title2)
+                    .foregroundColor(AppColors.awake)
                 
                 Text("点击下方按钮记录入睡")
                     .font(AppTypography.callout)
@@ -878,7 +1063,7 @@ struct AwakeStatusCard: View {
                         Text("记录入睡")
                     }
                 }
-                .buttonStyle(GradientButtonStyle(gradient: AppColors.sleepGradient))
+                .buttonStyle(PrimaryButtonStyle(color: AppColors.sleep))
                 
                 Button(action: onSleepCustom) {
                     Text("选择其他时间")
@@ -888,8 +1073,8 @@ struct AwakeStatusCard: View {
             }
             .padding(.top, AppSpacing.sm)
         }
-        .padding(.vertical, AppSpacing.xxl)
-        .padding(.horizontal, AppSpacing.lg)
+        .padding(.vertical, AppSpacing.xl)
+        .padding(.horizontal, AppSpacing.md)
         .glassCard(padding: 0)
     }
 }
@@ -1243,7 +1428,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                AppColors.backgroundGradient
+                AppColors.background
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -1275,12 +1460,15 @@ struct SettingsView: View {
                                     .labelsHidden()
                                     .tint(AppColors.primary)
                             }
-                            .padding(AppSpacing.lg)
+                            .padding(AppSpacing.md)
                             .background(AppColors.surface)
                             .cornerRadius(AppRadius.lg)
-                            .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppRadius.lg)
+                                    .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+                            )
                         }
-                        .padding(.horizontal, AppSpacing.lg)
+                        .padding(.horizontal, AppSpacing.md)
                         
                         // 预览卡片
                         VStack(spacing: AppSpacing.md) {
@@ -1299,13 +1487,16 @@ struct SettingsView: View {
                                     .foregroundColor(AppColors.textSecondary)
                                     .multilineTextAlignment(.center)
                             }
-                            .padding(AppSpacing.lg)
+                            .padding(AppSpacing.md)
                             .frame(maxWidth: .infinity)
                             .background(AppColors.surface)
                             .cornerRadius(AppRadius.lg)
-                            .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppRadius.lg)
+                                    .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+                            )
                         }
-                        .padding(.horizontal, AppSpacing.lg)
+                        .padding(.horizontal, AppSpacing.md)
                         
                         // 调节滑块
                         VStack(spacing: AppSpacing.md) {
@@ -1330,12 +1521,15 @@ struct SettingsView: View {
                                     .font(AppTypography.footnoteMedium)
                                     .foregroundColor(AppColors.primary)
                             }
-                            .padding(AppSpacing.lg)
+                            .padding(AppSpacing.md)
                             .background(AppColors.surface)
                             .cornerRadius(AppRadius.lg)
-                            .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppRadius.lg)
+                                    .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+                            )
                         }
-                        .padding(.horizontal, AppSpacing.lg)
+                        .padding(.horizontal, AppSpacing.md)
                         
                         // 说明
                         Text("调整后，App 内的所有文字大小将随之变化。")
@@ -1366,7 +1560,7 @@ struct MealStatisticsView: View {
     let records: [MealRecord]
     
     var body: some View {
-        VStack(spacing: AppSpacing.xl) {
+        VStack(spacing: AppSpacing.lg) {
             // 1. 进食频率趋势 (过去 7 天)
             VStack(alignment: .leading, spacing: AppSpacing.md) {
                 Text("进食频率 (过去 7 天)")
@@ -1379,11 +1573,11 @@ struct MealStatisticsView: View {
                             x: .value("日期", item.date, unit: .day),
                             y: .value("次数", item.count)
                         )
-                        .foregroundStyle(AppColors.mealGradient)
+                        .foregroundStyle(AppColors.meal)
                         .cornerRadius(AppRadius.xs)
                     }
                 }
-                .frame(height: 200)
+                .frame(height: 176)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day)) { _ in
                         AxisValueLabel(format: .dateTime.month().day())
@@ -1409,13 +1603,13 @@ struct MealStatisticsView: View {
                         .cornerRadius(AppRadius.sm)
                     }
                 }
-                .frame(height: 200)
+                .frame(height: 176)
                 .chartForegroundStyleScale(domain: MealType.allCases.map { $0.rawValue }, range: MealType.allCases.map { $0.color })
             }
             .glassCard()
             
             // 3. 统计摘要
-            HStack(spacing: AppSpacing.md) {
+            HStack(spacing: AppSpacing.sm) {
                 StatsCard(
                     title: "平均每日",
                     value: String(format: "%.1f次", averageDailyCount),
@@ -1435,7 +1629,7 @@ struct MealStatisticsView: View {
                 )
             }
         }
-        .padding(.horizontal, AppSpacing.lg)
+        .padding(.horizontal, AppSpacing.md)
     }
     
     // 数据处理逻辑
