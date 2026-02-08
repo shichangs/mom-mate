@@ -26,20 +26,20 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A1234567890123456789012B /* MomMateApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomMateApp.swift; sourceTree = "<group>"; };
-		A1234567890123456789012D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A1234567890123456789012F /* SleepRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepRecord.swift; sourceTree = "<group>"; };
-		A1234567890123456789013B /* SleepRecordManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepRecordManager.swift; sourceTree = "<group>"; };
-		A1234567890123456789014H /* SleepStatistics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepStatistics.swift; sourceTree = "<group>"; };
-		A1234567890123456789014L /* NotesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesManager.swift; sourceTree = "<group>"; };
-		A1234567890123456789014N /* NotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesView.swift; sourceTree = "<group>"; };
-		A1234567890123456789014P /* Milestone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Milestone.swift; sourceTree = "<group>"; };
-		A1234567890123456789014R /* MilestoneManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneManager.swift; sourceTree = "<group>"; };
-		A1234567890123456789014V /* MealRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealRecord.swift; sourceTree = "<group>"; };
-		A1234567890123456789014X /* MealRecordManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealRecordManager.swift; sourceTree = "<group>"; };
-		A1234567890123456789015B /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		A1234567890123456789015D /* MilestonesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestonesTabView.swift; sourceTree = "<group>"; };
-		A1234567890123456789016K /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		A1234567890123456789012B /* MomMateApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/MomMateApp.swift; sourceTree = "<group>"; };
+		A1234567890123456789012D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ContentView.swift; sourceTree = "<group>"; };
+		A1234567890123456789012F /* SleepRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Sleep/Models/SleepRecord.swift; sourceTree = "<group>"; };
+		A1234567890123456789013B /* SleepRecordManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Sleep/Managers/SleepRecordManager.swift; sourceTree = "<group>"; };
+		A1234567890123456789014H /* SleepStatistics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Sleep/Statistics/SleepStatistics.swift; sourceTree = "<group>"; };
+		A1234567890123456789014L /* NotesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Notes/Managers/NotesManager.swift; sourceTree = "<group>"; };
+		A1234567890123456789014N /* NotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Notes/Views/NotesView.swift; sourceTree = "<group>"; };
+		A1234567890123456789014P /* Milestone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Milestone/Models/Milestone.swift; sourceTree = "<group>"; };
+		A1234567890123456789014R /* MilestoneManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Milestone/Managers/MilestoneManager.swift; sourceTree = "<group>"; };
+		A1234567890123456789014V /* MealRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Meal/Models/MealRecord.swift; sourceTree = "<group>"; };
+		A1234567890123456789014X /* MealRecordManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Meal/Managers/MealRecordManager.swift; sourceTree = "<group>"; };
+		A1234567890123456789015B /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main/MainTabView.swift; sourceTree = "<group>"; };
+		A1234567890123456789015D /* MilestonesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Milestone/Views/MilestonesTabView.swift; sourceTree = "<group>"; };
+		A1234567890123456789016K /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Design/DesignSystem.swift; sourceTree = "<group>"; };
 		A1234567890123456789013D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1234567890123456789013F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1234567890123456789014A /* MomMate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MomMate.app; sourceTree = BUILT_PRODUCTS_DIR; };
