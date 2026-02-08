@@ -33,6 +33,7 @@
 
 - [ ] 已完成核心路径自测
 - [ ] 已覆盖边界场景（如时间跨天/空数据/重复操作）
+- [ ] 已按 `docs/testing/REGRESSION_CHECKLIST.md` 完成回归检查
 
 验证说明（含截图/录屏/测试步骤）：
 
@@ -45,3 +46,4 @@
 - [ ] 无阻断性缺陷（Crash/数据错乱/数据丢失）
 - [ ] 满足 `Release Gate` 要求（见 `docs/product/PRD.md` 第 15 章）
 - [ ] 满足开发规范（见 `docs/process/DEVELOPMENT_GUIDELINES.md`）
+- [ ] CI 构建通过（`.github/workflows/ios-ci.yml`）

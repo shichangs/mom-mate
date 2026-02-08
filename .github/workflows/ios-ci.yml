@@ -1,0 +1,27 @@
+name: iOS CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Xcode Version
+        run: xcodebuild -version
+
+      - name: Build (iOS Simulator)
+        run: |
+          xcodebuild \
+            -project MomMate.xcodeproj \
+            -scheme MomMate \
+            -destination 'generic/platform=iOS Simulator' \
+            build
