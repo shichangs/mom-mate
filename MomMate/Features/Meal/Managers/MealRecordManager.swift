@@ -11,9 +11,17 @@ class MealRecordManager: ObservableObject {
     @Published var mealRecords: [MealRecord] = []
     
     private let mealRecordsKey = "MealRecords"
+    private let cloudSyncEnabledKey = "cloudSyncEnabled"
+    private let cloudStore = NSUbiquitousKeyValueStore.default
+    private var lastKnownCloudSyncEnabled = UserDefaults.standard.object(forKey: "cloudSyncEnabled") as? Bool ?? true
     
     init() {
+        setupObservers()
         loadMealRecords()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     func addMealRecord(_ record: MealRecord) {
@@ -52,16 +60,72 @@ class MealRecordManager: ObservableObject {
     }
     
     private func saveMealRecords() {
-        if let encoded = try? JSONEncoder().encode(mealRecords) {
-            UserDefaults.standard.set(encoded, forKey: mealRecordsKey)
+        guard let encoded = try? JSONEncoder().encode(mealRecords) else { return }
+        UserDefaults.standard.set(encoded, forKey: mealRecordsKey)
+        if isCloudSyncEnabled {
+            cloudStore.set(encoded, forKey: mealRecordsKey)
+            cloudStore.synchronize()
         }
     }
     
     private func loadMealRecords() {
-        if let data = UserDefaults.standard.data(forKey: mealRecordsKey),
-           let decoded = try? JSONDecoder().decode([MealRecord].self, from: data) {
-            mealRecords = decoded
+        let data: Data?
+        if isCloudSyncEnabled {
+            cloudStore.synchronize()
+            data = cloudStore.data(forKey: mealRecordsKey) ?? UserDefaults.standard.data(forKey: mealRecordsKey)
+        } else {
+            data = UserDefaults.standard.data(forKey: mealRecordsKey)
         }
+        
+        guard let data,
+              let decoded = try? JSONDecoder().decode([MealRecord].self, from: data) else {
+            mealRecords = []
+            return
+        }
+        mealRecords = decoded
+    }
+    
+    private var isCloudSyncEnabled: Bool {
+        UserDefaults.standard.object(forKey: cloudSyncEnabledKey) as? Bool ?? true
+    }
+    
+    private func pushCurrentRecordsToCloud() {
+        guard let encoded = try? JSONEncoder().encode(mealRecords) else { return }
+        cloudStore.set(encoded, forKey: mealRecordsKey)
+        cloudStore.synchronize()
+    }
+    
+    private func setupObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCloudStoreDidChange(_:)),
+            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: cloudStore
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleUserDefaultsDidChange(_:)),
+            name: UserDefaults.didChangeNotification,
+            object: UserDefaults.standard
+        )
+    }
+    
+    @objc
+    private func handleCloudStoreDidChange(_ notification: Notification) {
+        guard isCloudSyncEnabled else { return }
+        loadMealRecords()
+    }
+    
+    @objc
+    private func handleUserDefaultsDidChange(_ notification: Notification) {
+        let current = isCloudSyncEnabled
+        guard current != lastKnownCloudSyncEnabled else { return }
+        lastKnownCloudSyncEnabled = current
+        
+        if current {
+            pushCurrentRecordsToCloud()
+        }
+        loadMealRecords()
     }
 }
-

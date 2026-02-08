@@ -12,8 +12,12 @@ class SleepRecordManager: ObservableObject {
     
     private let recordsKey = "SleepRecords"
     private let testDataGeneratedKey = "TestDataGenerated"
+    private let cloudSyncEnabledKey = "cloudSyncEnabled"
+    private let cloudStore = NSUbiquitousKeyValueStore.default
+    private var lastKnownCloudSyncEnabled = UserDefaults.standard.object(forKey: "cloudSyncEnabled") as? Bool ?? true
     
     init() {
+        setupObservers()
         loadRecords()
 #if DEBUG
         // 如果没有数据且未生成过测试数据，则生成测试数据
@@ -22,6 +26,10 @@ class SleepRecordManager: ObservableObject {
             UserDefaults.standard.set(true, forKey: testDataGeneratedKey)
         }
 #endif
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     func startSleep() {
@@ -95,16 +103,29 @@ class SleepRecordManager: ObservableObject {
     }
     
     private func saveRecords() {
-        if let encoded = try? JSONEncoder().encode(records) {
-            UserDefaults.standard.set(encoded, forKey: recordsKey)
+        guard let encoded = try? JSONEncoder().encode(records) else { return }
+        UserDefaults.standard.set(encoded, forKey: recordsKey)
+        if isCloudSyncEnabled {
+            cloudStore.set(encoded, forKey: recordsKey)
+            cloudStore.synchronize()
         }
     }
     
     private func loadRecords() {
-        if let data = UserDefaults.standard.data(forKey: recordsKey),
-           let decoded = try? JSONDecoder().decode([SleepRecord].self, from: data) {
-            records = decoded
+        let data: Data?
+        if isCloudSyncEnabled {
+            cloudStore.synchronize()
+            data = cloudStore.data(forKey: recordsKey) ?? UserDefaults.standard.data(forKey: recordsKey)
+        } else {
+            data = UserDefaults.standard.data(forKey: recordsKey)
         }
+        
+        guard let data,
+              let decoded = try? JSONDecoder().decode([SleepRecord].self, from: data) else {
+            records = []
+            return
+        }
+        records = decoded
     }
     
     // MARK: - 测试数据生成
@@ -180,5 +201,49 @@ class SleepRecordManager: ObservableObject {
     func clearAllData() {
         records = []
         saveRecords()
+    }
+    
+    private var isCloudSyncEnabled: Bool {
+        UserDefaults.standard.object(forKey: cloudSyncEnabledKey) as? Bool ?? true
+    }
+    
+    private func pushCurrentRecordsToCloud() {
+        guard let encoded = try? JSONEncoder().encode(records) else { return }
+        cloudStore.set(encoded, forKey: recordsKey)
+        cloudStore.synchronize()
+    }
+    
+    private func setupObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCloudStoreDidChange(_:)),
+            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: cloudStore
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleUserDefaultsDidChange(_:)),
+            name: UserDefaults.didChangeNotification,
+            object: UserDefaults.standard
+        )
+    }
+    
+    @objc
+    private func handleCloudStoreDidChange(_ notification: Notification) {
+        guard isCloudSyncEnabled else { return }
+        loadRecords()
+    }
+    
+    @objc
+    private func handleUserDefaultsDidChange(_ notification: Notification) {
+        let current = isCloudSyncEnabled
+        guard current != lastKnownCloudSyncEnabled else { return }
+        lastKnownCloudSyncEnabled = current
+        
+        if current {
+            pushCurrentRecordsToCloud()
+        }
+        loadRecords()
     }
 }

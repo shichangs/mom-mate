@@ -11,8 +11,12 @@ class NotesManager: ObservableObject {
     @Published var notes: String = ""
     
     private let notesKey = "AppNotes"
+    private let cloudSyncEnabledKey = "cloudSyncEnabled"
+    private let cloudStore = NSUbiquitousKeyValueStore.default
+    private var lastKnownCloudSyncEnabled = UserDefaults.standard.object(forKey: "cloudSyncEnabled") as? Bool ?? true
     
     init() {
+        setupObservers()
         loadNotes()
         // 如果没有笔记，初始化默认笔记
         if notes.isEmpty {
@@ -20,14 +24,25 @@ class NotesManager: ObservableObject {
         }
     }
     
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
     func saveNotes() {
         UserDefaults.standard.set(notes, forKey: notesKey)
+        if isCloudSyncEnabled {
+            cloudStore.set(notes, forKey: notesKey)
+            cloudStore.synchronize()
+        }
     }
     
     func loadNotes() {
-        if let savedNotes = UserDefaults.standard.string(forKey: notesKey) {
-            notes = savedNotes
+        if isCloudSyncEnabled {
+            cloudStore.synchronize()
+            notes = cloudStore.string(forKey: notesKey) ?? UserDefaults.standard.string(forKey: notesKey) ?? ""
+            return
         }
+        notes = UserDefaults.standard.string(forKey: notesKey) ?? ""
     }
     
     private func initializeDefaultNotes() {
@@ -302,5 +317,47 @@ po UserDefaults.standard.object(forKey: "SleepRecords")
         formatter.locale = Locale(identifier: "zh_CN")
         return formatter.string(from: date)
     }
+    
+    private var isCloudSyncEnabled: Bool {
+        UserDefaults.standard.object(forKey: cloudSyncEnabledKey) as? Bool ?? true
+    }
+    
+    private func setupObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCloudStoreDidChange(_:)),
+            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: cloudStore
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleUserDefaultsDidChange(_:)),
+            name: UserDefaults.didChangeNotification,
+            object: UserDefaults.standard
+        )
+    }
+    
+    private func pushCurrentNotesToCloud() {
+        cloudStore.set(notes, forKey: notesKey)
+        cloudStore.synchronize()
+    }
+    
+    @objc
+    private func handleCloudStoreDidChange(_ notification: Notification) {
+        guard isCloudSyncEnabled else { return }
+        loadNotes()
+    }
+    
+    @objc
+    private func handleUserDefaultsDidChange(_ notification: Notification) {
+        let current = isCloudSyncEnabled
+        guard current != lastKnownCloudSyncEnabled else { return }
+        lastKnownCloudSyncEnabled = current
+        
+        if current {
+            pushCurrentNotesToCloud()
+        }
+        loadNotes()
+    }
 }
-
