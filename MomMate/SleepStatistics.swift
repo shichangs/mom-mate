@@ -47,6 +47,11 @@ class SleepStatisticsManager {
     
     private init() {}
     
+    // Sleep records are grouped by wake-up date so overnight sessions are attributed to the day they end.
+    private func referenceDate(for record: SleepRecord) -> Date? {
+        record.wakeTime
+    }
+    
     // MARK: - 按天统计
     func dailyStatistics(from records: [SleepRecord], days: Int = 7) -> [SleepStatistics] {
         let calendar = Calendar.current
@@ -59,20 +64,16 @@ class SleepStatisticsManager {
             let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
             
             let dayRecords = records.filter { record in
-                guard record.wakeTime != nil else { return false }
-                return record.sleepTime >= startOfDay && record.sleepTime < endOfDay
+                guard let date = referenceDate(for: record) else { return false }
+                return date >= startOfDay && date < endOfDay
             }
             
             let totalDuration = dayRecords.compactMap { $0.duration }.reduce(0, +)
             let sleepCount = dayRecords.count
             let averageDuration = sleepCount > 0 ? totalDuration / Double(sleepCount) : 0
             
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MM/dd"
-            formatter.locale = Locale(identifier: "zh_CN")
-            
             statistics.append(SleepStatistics(
-                period: formatter.string(from: date),
+                period: DateFormatters.dayLabel.string(from: date),
                 totalDuration: totalDuration,
                 averageDuration: averageDuration,
                 sleepCount: sleepCount,
@@ -95,19 +96,16 @@ class SleepStatisticsManager {
             let endOfWeek = calendar.date(byAdding: .day, value: 7, to: startOfWeek)!
             
             let weekRecords = records.filter { record in
-                guard record.wakeTime != nil else { return false }
-                return record.sleepTime >= startOfWeek && record.sleepTime < endOfWeek
+                guard let date = referenceDate(for: record) else { return false }
+                return date >= startOfWeek && date < endOfWeek
             }
             
             let totalDuration = weekRecords.compactMap { $0.duration }.reduce(0, +)
             let sleepCount = weekRecords.count
             let averageDuration = sleepCount > 0 ? totalDuration / Double(sleepCount) : 0
             
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MM/dd"
-            formatter.locale = Locale(identifier: "zh_CN")
-            
-            let weekLabel = "\(formatter.string(from: startOfWeek))-\(formatter.string(from: calendar.date(byAdding: .day, value: 6, to: startOfWeek)!))"
+            let weekEnd = calendar.date(byAdding: .day, value: 6, to: startOfWeek) ?? startOfWeek
+            let weekLabel = "\(DateFormatters.dayLabel.string(from: startOfWeek))-\(DateFormatters.dayLabel.string(from: weekEnd))"
             
             statistics.append(SleepStatistics(
                 period: weekLabel,
@@ -135,20 +133,16 @@ class SleepStatisticsManager {
             let endOfMonthEnd = calendar.date(byAdding: .day, value: 1, to: endOfMonthStart)!
             
             let monthRecords = records.filter { record in
-                guard record.wakeTime != nil else { return false }
-                return record.sleepTime >= startOfMonth && record.sleepTime < endOfMonthEnd
+                guard let date = referenceDate(for: record) else { return false }
+                return date >= startOfMonth && date < endOfMonthEnd
             }
             
             let totalDuration = monthRecords.compactMap { $0.duration }.reduce(0, +)
             let sleepCount = monthRecords.count
             let averageDuration = sleepCount > 0 ? totalDuration / Double(sleepCount) : 0
             
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy年MM月"
-            formatter.locale = Locale(identifier: "zh_CN")
-            
             statistics.append(SleepStatistics(
-                period: formatter.string(from: monthStart),
+                period: DateFormatters.monthLabelZh.string(from: monthStart),
                 totalDuration: totalDuration,
                 averageDuration: averageDuration,
                 sleepCount: sleepCount,
@@ -171,20 +165,16 @@ class SleepStatisticsManager {
             let endOfYear = calendar.date(byAdding: DateComponents(year: 1), to: startOfYear)!
             
             let yearRecords = records.filter { record in
-                guard record.wakeTime != nil else { return false }
-                return record.sleepTime >= startOfYear && record.sleepTime < endOfYear
+                guard let date = referenceDate(for: record) else { return false }
+                return date >= startOfYear && date < endOfYear
             }
             
             let totalDuration = yearRecords.compactMap { $0.duration }.reduce(0, +)
             let sleepCount = yearRecords.count
             let averageDuration = sleepCount > 0 ? totalDuration / Double(sleepCount) : 0
             
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy年"
-            formatter.locale = Locale(identifier: "zh_CN")
-            
             statistics.append(SleepStatistics(
-                period: formatter.string(from: yearStart),
+                period: DateFormatters.yearLabelZh.string(from: yearStart),
                 totalDuration: totalDuration,
                 averageDuration: averageDuration,
                 sleepCount: sleepCount,
@@ -207,3 +197,28 @@ class SleepStatisticsManager {
     }
 }
 
+#if DEBUG
+enum DebugSelfChecks {
+    static func run() {
+        verifyOvernightRecordAttributedToWakeDay()
+    }
+    
+    private static func verifyOvernightRecordAttributedToWakeDay() {
+        let calendar = Calendar.current
+        let now = Date()
+        let wakeTime = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: now) ?? now
+        let sleepTime = calendar.date(byAdding: .hour, value: -8, to: wakeTime) ?? wakeTime
+        let record = SleepRecord(sleepTime: sleepTime, wakeTime: wakeTime)
+        
+        let stats = SleepStatisticsManager.shared.dailyStatistics(from: [record], days: 2)
+        let todayKey = DateFormatters.dayLabel.string(from: wakeTime)
+        
+        guard let todayStat = stats.first(where: { $0.period == todayKey }) else {
+            assertionFailure("DebugSelfChecks: missing today statistics bucket")
+            return
+        }
+        
+        assert(todayStat.sleepCount == 1, "DebugSelfChecks: overnight record should be grouped by wake day")
+    }
+}
+#endif

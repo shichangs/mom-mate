@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+@available(*, deprecated, message: "Use MealsTabView in MainTabView.swift")
 struct MealRecordsView: View {
     @ObservedObject var mealRecordManager: MealRecordManager
     @Environment(\.dismiss) var dismiss
@@ -596,4 +597,3 @@ struct RecommendationCard: View {
         .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
     }
 }
-

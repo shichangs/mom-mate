@@ -129,16 +129,11 @@ struct HistoryRecordCard: View {
     }
     
     private var dayOfMonth: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d"
-        return formatter.string(from: record.sleepTime)
+        DateFormatters.dayNumber.string(from: record.sleepTime)
     }
     
     private var monthAbbrev: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "M月"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: record.sleepTime)
+        DateFormatters.monthZh.string(from: record.sleepTime)
     }
 }
 
@@ -162,8 +157,8 @@ struct EditRecordView: View {
         NavigationView {
             Form {
                 Section("睡眠时间") {
-                    DatePicker("入睡时间", selection: $sleepTime)
-                    DatePicker("醒来时间", selection: $wakeTime)
+                    DatePicker("入睡时间", selection: $sleepTime, in: ...Date())
+                    DatePicker("醒来时间", selection: $wakeTime, in: sleepTime...Date())
                 }
                 
                 Section {
@@ -202,9 +197,14 @@ struct EditRecordView: View {
                         saveChanges()
                     }
                     .fontWeight(.semibold)
+                    .disabled(!canSave)
                 }
             }
         }
+    }
+    
+    private var canSave: Bool {
+        wakeTime > sleepTime
     }
     
     private var formattedDuration: String {
@@ -218,6 +218,7 @@ struct EditRecordView: View {
     }
     
     private func saveChanges() {
+        guard canSave else { return }
         var updatedRecord = record
         updatedRecord.sleepTime = sleepTime
         updatedRecord.wakeTime = wakeTime

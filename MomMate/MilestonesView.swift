@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+@available(*, deprecated, message: "Use MilestonesTabView in MilestonesTabView.swift")
 struct MilestonesView: View {
     @ObservedObject var milestoneManager: MilestoneManager
     @Environment(\.dismiss) var dismiss
@@ -353,4 +354,3 @@ struct AddEditMilestoneView: View {
         }
     }
 }
-

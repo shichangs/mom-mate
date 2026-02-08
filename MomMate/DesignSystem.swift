@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 // MARK: - Semantic Colors (情绪化色彩)
 struct AppColors {
@@ -81,6 +82,71 @@ struct AppColors {
         Color(hex: "EC4899"),
         Color(hex: "F59E0B")
     ]
+}
+
+// MARK: - Shared Date Formatters
+enum DateFormatters {
+    static let fullDateTimeZhCN: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+    
+    static let time24ZhCN: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+    
+    static let dayNumber: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter
+    }()
+    
+    static let monthZh: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M月"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+    
+    static let monthDayZh: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M月d日"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+    
+    static let dayLabel: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+    
+    static let monthLabelZh: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy年MM月"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+    
+    static let yearLabelZh: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy年"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+    
+    static let fullDateZh: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy年MM月dd日"
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
 }
 
 // MARK: - Color Extension

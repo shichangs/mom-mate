@@ -15,20 +15,24 @@ class SleepRecordManager: ObservableObject {
     
     init() {
         loadRecords()
+#if DEBUG
         // 如果没有数据且未生成过测试数据，则生成测试数据
         if records.isEmpty && !UserDefaults.standard.bool(forKey: testDataGeneratedKey) {
             generateTestData()
             UserDefaults.standard.set(true, forKey: testDataGeneratedKey)
         }
+#endif
     }
     
     func startSleep() {
+        guard currentSleepRecord == nil else { return }
         let newRecord = SleepRecord(sleepTime: Date())
         records.insert(newRecord, at: 0)
         saveRecords()
     }
     
     func startSleep(minutesAgo: Int) {
+        guard currentSleepRecord == nil else { return }
         let sleepTime = Calendar.current.date(byAdding: .minute, value: -minutesAgo, to: Date()) ?? Date()
         let newRecord = SleepRecord(sleepTime: sleepTime)
         records.insert(newRecord, at: 0)
@@ -52,6 +56,7 @@ class SleepRecordManager: ObservableObject {
     func endCurrentSleep(minutesAgo: Int) {
         if let currentRecord = records.first, currentRecord.isSleeping {
             let wakeTime = Calendar.current.date(byAdding: .minute, value: -minutesAgo, to: Date()) ?? Date()
+            guard wakeTime > currentRecord.sleepTime else { return }
             if let index = records.firstIndex(where: { $0.id == currentRecord.id }) {
                 let updatedRecord = SleepRecord(id: currentRecord.id, sleepTime: currentRecord.sleepTime, wakeTime: wakeTime)
                 records[index] = updatedRecord
@@ -177,4 +182,3 @@ class SleepRecordManager: ObservableObject {
         saveRecords()
     }
 }
-

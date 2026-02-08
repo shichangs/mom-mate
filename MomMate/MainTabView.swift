@@ -157,7 +157,6 @@ struct MealsTabView: View {
     @State private var showingMamaRecipe = false
     @State private var selectedMealType: MealType? = nil
     @AppStorage("fontSizeFactor") private var fontSizeFactor: Double = 1.0
-    @AppStorage("customFoods") private var customFoodsData: Data = Data()
     
     var filteredRecords: [MealRecord] {
         if let type = selectedMealType {
@@ -820,9 +819,7 @@ struct SleepingStatusCard: View {
     }
     
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
+        DateFormatters.time24ZhCN.string(from: date)
     }
 }
 
@@ -972,9 +969,7 @@ struct SleepRecordRowView: View {
         } else if calendar.isDateInYesterday(date) {
             return "昨天"
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "M月d日"
-            return formatter.string(from: date)
+            return DateFormatters.monthDayZh.string(from: date)
         }
     }
 }
@@ -998,7 +993,7 @@ struct TimePickerSheet: View {
                     "",
                     selection: $selectedTime,
                     in: ...Date(),
-                    displayedComponents: [.hourAndMinute]
+                    displayedComponents: [.date, .hourAndMinute]
                 )
                 .datePickerStyle(.wheel)
                 .labelsHidden()
@@ -1034,11 +1029,31 @@ struct QuickAddMealSheet: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedMealType: MealType = .snack
     @State private var selectedFoods: Set<String> = []
+    @AppStorage("customFoods") private var customFoodsData: Data = Data()
     
-    let commonFoods = [
+    private let defaultFoods = [
         "米糊", "南瓜泥", "胡萝卜泥", "苹果泥", "香蕉泥",
         "土豆泥", "鸡蛋", "牛奶", "酸奶", "面条"
     ]
+    
+    private var customFoods: [String] {
+        (try? JSONDecoder().decode([String].self, from: customFoodsData)) ?? []
+    }
+    
+    private var availableFoods: [String] {
+        var seen = Set<String>()
+        var merged: [String] = []
+        
+        for food in defaultFoods + customFoods {
+            let trimmed = food.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || seen.contains(trimmed) {
+                continue
+            }
+            seen.insert(trimmed)
+            merged.append(trimmed)
+        }
+        return merged
+    }
     
     var body: some View {
         NavigationView {
@@ -1072,7 +1087,7 @@ struct QuickAddMealSheet: View {
                             .foregroundColor(AppColors.textSecondary)
                         
                         FlowLayout(spacing: AppSpacing.xs) {
-                            ForEach(commonFoods, id: \.self) { food in
+                            ForEach(availableFoods, id: \.self) { food in
                                 FoodChipView(
                                     food: food,
                                     isSelected: selectedFoods.contains(food),

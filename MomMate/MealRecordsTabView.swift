@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+@available(*, deprecated, message: "Use MealsTabView in MainTabView.swift")
 struct MealRecordsTabView: View {
     @ObservedObject var mealRecordManager: MealRecordManager
     @State private var showingAddMeal = false
@@ -318,4 +319,3 @@ struct FoodQuickButton: View {
         }
     }
 }
-

@@ -23,10 +23,7 @@ struct Milestone: Identifiable, Codable {
     }
     
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy年MM月dd日"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: date)
+        DateFormatters.fullDateZh.string(from: date)
     }
     
     var relativeDate: String {
@@ -100,4 +97,3 @@ enum MilestoneCategory: String, Codable, CaseIterable {
         }
     }
 }
-

@@ -26,17 +26,11 @@ struct MealRecord: Identifiable, Codable {
     }
     
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: date)
+        DateFormatters.fullDateTimeZhCN.string(from: date)
     }
     
     var formattedTime: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: date)
+        DateFormatters.time24ZhCN.string(from: date)
     }
     
     var relativeTime: String {
@@ -168,4 +162,3 @@ struct FoodRecommendation {
         return recommendations.filter { $0.age <= ageInMonths }
     }
 }
-
