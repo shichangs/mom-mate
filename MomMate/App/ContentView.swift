@@ -6,10 +6,320 @@
 //
 
 import SwiftUI
+import AuthenticationServices
 
 struct ContentView: View {
     var body: some View {
         MainTabView()
+    }
+}
+
+// MARK: - 第三方认证
+enum AuthProvider: String, Codable {
+    case apple = "Apple"
+    case google = "Google"
+    case wechat = "微信"
+}
+
+struct SocialSession: Codable {
+    let provider: AuthProvider
+    let userID: String
+    let displayName: String
+}
+
+struct LocalDataSnapshot: Codable {
+    let sleepRecordCount: Int
+    let mealRecordCount: Int
+    let milestoneCount: Int
+    let hasNotes: Bool
+    let capturedAt: Date
+}
+
+@MainActor
+final class AuthManager: ObservableObject {
+    @Published private(set) var isAuthenticated = false
+    @Published private(set) var displayName: String?
+    @Published private(set) var provider: AuthProvider?
+    
+    private let defaults = UserDefaults.standard
+    private let sessionStoreKey = "auth.social_session.v1"
+    private let syncAuthorizedKey = "sync.auth.enabled.v1"
+    private let sleepRecordsKey = "SleepRecords"
+    private let mealRecordsKey = "MealRecords"
+    private let milestonesKey = "Milestones"
+    private let notesKey = "AppNotes"
+    
+    init() {
+        restoreSession()
+    }
+    
+    var syncButtonTitle: String {
+        isAuthenticated ? "同步已开启\(userBadge)" : "登录以同步"
+    }
+    
+    var syncButtonIcon: String {
+        isAuthenticated ? "checkmark.icloud.fill" : "icloud"
+    }
+    
+    var syncButtonColor: Color {
+        isAuthenticated ? AppColors.accent : AppColors.textSecondary
+    }
+    
+    var userBadge: String {
+        guard let provider else { return "" }
+        let name = displayName ?? "\(provider.rawValue)用户"
+        return " · \(name)"
+    }
+    
+    func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) -> String? {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                return "无法获取 Apple 登录凭证"
+            }
+            
+            let formatter = PersonNameComponentsFormatter()
+            let fullName = credential.fullName.flatMap { formatter.string(from: $0) } ?? ""
+            let nameCandidate = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let emailCandidate = (credential.email ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let resolvedName = nameCandidate.isEmpty ? (emailCandidate.isEmpty ? "Apple 用户" : emailCandidate) : nameCandidate
+            saveSession(
+                SocialSession(
+                    provider: .apple,
+                    userID: credential.user,
+                    displayName: resolvedName
+                )
+            )
+            return nil
+        case .failure(let error):
+            if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+                return "已取消登录"
+            }
+            return "Apple 登录失败，请稍后重试"
+        }
+    }
+    
+    func startGoogleSignIn() -> String? {
+        notConfiguredMessage(for: .google)
+    }
+    
+    func startWeChatSignIn() -> String? {
+        notConfiguredMessage(for: .wechat)
+    }
+    
+#if DEBUG
+    func debugMockSignIn() {
+        let mockSession = SocialSession(
+            provider: .apple,
+            userID: "debug.mock.apple.user",
+            displayName: "Debug Apple User"
+        )
+        saveSession(mockSession)
+    }
+#endif
+    
+    func logout() {
+        isAuthenticated = false
+        displayName = nil
+        provider = nil
+        defaults.removeObject(forKey: sessionStoreKey)
+        defaults.set(false, forKey: syncAuthorizedKey)
+    }
+    
+    private func restoreSession() {
+        guard let data = defaults.data(forKey: sessionStoreKey),
+              let session = try? JSONDecoder().decode(SocialSession.self, from: data) else {
+            defaults.set(false, forKey: syncAuthorizedKey)
+            return
+        }
+        
+        applySession(session)
+        defaults.set(true, forKey: syncAuthorizedKey)
+    }
+    
+    private func saveSession(_ session: SocialSession) {
+        guard let data = try? JSONEncoder().encode(session) else { return }
+        defaults.set(data, forKey: sessionStoreKey)
+        defaults.set(true, forKey: syncAuthorizedKey)
+        captureFirstSyncSnapshotIfNeeded(userID: session.userID)
+        applySession(session)
+    }
+    
+    private func applySession(_ session: SocialSession) {
+        provider = session.provider
+        displayName = session.displayName
+        isAuthenticated = true
+    }
+    
+    private func notConfiguredMessage(for provider: AuthProvider) -> String {
+        "\(provider.rawValue) 登录已接入入口，需先配置该平台的 Client ID / AppID 和回调 URL。"
+    }
+    
+    private func captureFirstSyncSnapshotIfNeeded(userID: String) {
+        let escapedUserID = userID.replacingOccurrences(of: ".", with: "_")
+        let markerKey = "sync.initialMigration.done.\(escapedUserID)"
+        guard !defaults.bool(forKey: markerKey) else { return }
+        
+        let snapshot = LocalDataSnapshot(
+            sleepRecordCount: decodeArrayCount(forKey: sleepRecordsKey),
+            mealRecordCount: decodeArrayCount(forKey: mealRecordsKey),
+            milestoneCount: decodeArrayCount(forKey: milestonesKey),
+            hasNotes: !(defaults.string(forKey: notesKey) ?? "").isEmpty,
+            capturedAt: Date()
+        )
+        
+        if let data = try? JSONEncoder().encode(snapshot) {
+            defaults.set(data, forKey: "sync.initialMigration.snapshot.\(escapedUserID)")
+        }
+        defaults.set(true, forKey: markerKey)
+    }
+    
+    private func decodeArrayCount(forKey key: String) -> Int {
+        guard let data = defaults.data(forKey: key),
+              let object = try? JSONSerialization.jsonObject(with: data),
+              let array = object as? [Any] else { return 0 }
+        return array.count
+    }
+}
+
+struct AuthView: View {
+    @ObservedObject var authManager: AuthManager
+    @Binding var showingSheet: Bool
+    
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.backgroundGradient
+                    .ignoresSafeArea()
+                
+                VStack(spacing: AppSpacing.lg) {
+                    VStack(spacing: AppSpacing.xs) {
+                        Image(systemName: "person.badge.key.fill")
+                            .font(.system(size: 42, weight: .semibold))
+                            .foregroundStyle(AppColors.primary)
+                        Text("账号与同步")
+                            .font(AppTypography.largeTitle)
+                        Text("不登录也可以使用，登录仅用于数据同步和备份")
+                            .font(AppTypography.subhead)
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                    
+                    if authManager.isAuthenticated {
+                        VStack(spacing: AppSpacing.md) {
+                            HStack {
+                                Text("当前账号")
+                                Spacer()
+                                Text(authManager.userBadge.replacingOccurrences(of: " · ", with: ""))
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                            .font(AppTypography.body)
+                            .padding(AppSpacing.md)
+                            .background(AppColors.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
+                            
+                            Button(role: .destructive) {
+                                authManager.logout()
+                            } label: {
+                                Text("退出登录（保留本机数据）")
+                                    .font(AppTypography.bodySemibold)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, AppSpacing.md)
+                            }
+                            .background(AppColors.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
+                        }
+                    } else {
+                        VStack(spacing: AppSpacing.md) {
+                            SignInWithAppleButton(.signIn) { request in
+                                request.requestedScopes = [.fullName, .email]
+                            } onCompletion: { result in
+                                errorMessage = authManager.handleAppleSignIn(result)
+                                if errorMessage == nil {
+                                    showingSheet = false
+                                }
+                            }
+                            .signInWithAppleButtonStyle(.black)
+                            .frame(height: 50)
+                            .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
+                            
+                            Button {
+                                errorMessage = authManager.startGoogleSignIn()
+                            } label: {
+                                HStack(spacing: AppSpacing.sm) {
+                                    Image(systemName: "globe")
+                                    Text("使用 Google 登录")
+                                    Spacer()
+                                }
+                                .font(AppTypography.bodySemibold)
+                                .foregroundColor(AppColors.textPrimary)
+                                .padding(AppSpacing.md)
+                                .background(AppColors.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
+                            }
+                            
+                            Button {
+                                errorMessage = authManager.startWeChatSignIn()
+                            } label: {
+                                HStack(spacing: AppSpacing.sm) {
+                                    Image(systemName: "message.fill")
+                                    Text("使用微信登录")
+                                    Spacer()
+                                }
+                                .font(AppTypography.bodySemibold)
+                                .foregroundColor(AppColors.textPrimary)
+                                .padding(AppSpacing.md)
+                                .background(AppColors.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
+                            }
+                            
+#if DEBUG
+                            Button {
+                                authManager.debugMockSignIn()
+                                showingSheet = false
+                            } label: {
+                                HStack(spacing: AppSpacing.sm) {
+                                    Image(systemName: "hammer.fill")
+                                    Text("Debug Mock Apple 登录")
+                                    Spacer()
+                                }
+                                .font(AppTypography.bodySemibold)
+                                .foregroundColor(Color.orange)
+                                .padding(AppSpacing.md)
+                                .background(AppColors.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
+                            }
+#endif
+                        }
+                        
+                        Text("已支持 Apple 原生登录；Google/微信需先完成平台参数配置。")
+                            .font(AppTypography.footnote)
+                            .foregroundColor(AppColors.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    if let errorMessage, !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .font(AppTypography.footnote)
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, AppSpacing.xl)
+                .padding(.top, AppSpacing.xl)
+                .padding(.bottom, AppSpacing.xl)
+            }
+            .navigationTitle("账号")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("完成") { showingSheet = false }
+                }
+            }
+        }
     }
 }
 
