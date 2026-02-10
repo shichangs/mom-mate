@@ -179,9 +179,9 @@ extension Color {
 // MARK: - Typography (动态字体)
 struct AppTypography {
     // 字体缩放比例 (默认 1.0)
-    // 获取用户设置的缩放比例，建议在 View 中通过 @AppStorage("fontSizeFactor") 传递给这里或直接读取
     static var fontScale: CGFloat {
-        UserDefaults.standard.double(forKey: "fontSizeFactor") == 0 ? 1.0 : CGFloat(UserDefaults.standard.double(forKey: "fontSizeFactor"))
+        let value = UserDefaults.standard.double(forKey: StorageKeys.fontSizeFactor)
+        return value == 0 ? 1.0 : CGFloat(value)
     }
     
     private static func scaledFont(size: CGFloat, weight: Font.Weight, design: Font.Design = .default) -> Font {
