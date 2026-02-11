@@ -21,6 +21,8 @@
 		A1234567890123456789016I /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789015B /* MainTabView.swift */; };
 		A1234567890123456789015G /* MilestonesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789015D /* MilestonesTabView.swift */; };
 		A1234567890123456789016J /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789016K /* DesignSystem.swift */; };
+		A1234567890123456789017A /* CloudSyncStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789017B /* CloudSyncStore.swift */; };
+		A1234567890123456789017C /* StorageKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789017D /* StorageKeys.swift */; };
 		A1234567890123456789013C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013D /* Assets.xcassets */; };
 		A1234567890123456789013E /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013F /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -40,6 +42,8 @@
 		A1234567890123456789015B /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main/MainTabView.swift; sourceTree = "<group>"; };
 		A1234567890123456789015D /* MilestonesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Milestone/Views/MilestonesTabView.swift; sourceTree = "<group>"; };
 		A1234567890123456789016K /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Design/DesignSystem.swift; sourceTree = "<group>"; };
+		A1234567890123456789017B /* CloudSyncStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/CloudSyncStore.swift; sourceTree = "<group>"; };
+		A1234567890123456789017D /* StorageKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/StorageKeys.swift; sourceTree = "<group>"; };
 		A1234567890123456789013D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1234567890123456789013F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1234567890123456789014A /* MomMate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MomMate.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -81,6 +85,8 @@
 				A1234567890123456789015B /* MainTabView.swift */,
 				A1234567890123456789015D /* MilestonesTabView.swift */,
 				A1234567890123456789016K /* DesignSystem.swift */,
+				A1234567890123456789017B /* CloudSyncStore.swift */,
+				A1234567890123456789017D /* StorageKeys.swift */,
 				A1234567890123456789013D /* Assets.xcassets */,
 				A1234567890123456789014F /* Preview Content */,
 			);
@@ -186,6 +192,8 @@
 				A1234567890123456789016I /* MainTabView.swift in Sources */,
 				A1234567890123456789015G /* MilestonesTabView.swift in Sources */,
 				A1234567890123456789016J /* DesignSystem.swift in Sources */,
+				A1234567890123456789017A /* CloudSyncStore.swift in Sources */,
+				A1234567890123456789017C /* StorageKeys.swift in Sources */,
 				A1234567890123456789012A /* MomMateApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
