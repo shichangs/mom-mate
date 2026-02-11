@@ -8,7 +8,7 @@ on:
       - master
 
 jobs:
-  build:
+  build-and-test:
     runs-on: macos-latest
 
     steps:
@@ -18,10 +18,28 @@ jobs:
       - name: Xcode Version
         run: xcodebuild -version
 
+      - name: Select Simulator
+        run: |
+          SIMULATOR_NAME=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {gsub(/^[ \t]+|[ \t]+$/, "", $1); print $1; exit}')
+          if [ -z "$SIMULATOR_NAME" ]; then
+            echo "::error::No available iPhone simulator found"
+            exit 1
+          fi
+          echo "SIMULATOR_NAME=$SIMULATOR_NAME" >> "$GITHUB_ENV"
+          echo "Using simulator: $SIMULATOR_NAME"
+
       - name: Build (iOS Simulator)
         run: |
           xcodebuild \
             -project MomMate.xcodeproj \
             -scheme MomMate \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "platform=iOS Simulator,name=$SIMULATOR_NAME" \
             build
+
+      - name: Run Tests
+        run: |
+          xcodebuild \
+            -project MomMate.xcodeproj \
+            -scheme MomMate \
+            -destination "platform=iOS Simulator,name=$SIMULATOR_NAME" \
+            test

@@ -7,19 +7,22 @@
 
 import Foundation
 
-class MilestoneManager: ObservableObject {
+class MilestoneManager: ObservableObject, CloudSyncObserver {
     @Published var milestones: [Milestone] = []
 
-    private let store = CloudSyncStore(storageKey: StorageKeys.milestones)
+    let store = CloudSyncStore(storageKey: StorageKeys.milestones)
 
     init() {
-        setupObservers()
+        store.setupObservers(for: self)
         loadMilestones()
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        store.teardownObservers()
     }
+
+    func reloadFromStore() { loadMilestones() }
+    func pushCurrentDataToCloud() { store.pushToCloud(milestones) }
 
     func addMilestone(_ milestone: Milestone) {
         milestones.insert(milestone, at: 0)
@@ -56,37 +59,4 @@ class MilestoneManager: ObservableObject {
         milestones = store.load([Milestone].self) ?? []
     }
 
-    // MARK: - Observers
-
-    private func setupObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleCloudStoreDidChange(_:)),
-            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: store.cloudStore
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleUserDefaultsDidChange(_:)),
-            name: UserDefaults.didChangeNotification,
-            object: UserDefaults.standard
-        )
-    }
-
-    @objc
-    private func handleCloudStoreDidChange(_ notification: Notification) {
-        guard store.isCloudSyncEnabled else { return }
-        loadMilestones()
-    }
-
-    @objc
-    private func handleUserDefaultsDidChange(_ notification: Notification) {
-        let current = store.isCloudSyncEnabled
-        guard current != store.lastKnownCloudSyncEnabled else { return }
-        store.lastKnownCloudSyncEnabled = current
-        if current {
-            store.pushToCloud(milestones)
-        }
-        loadMilestones()
-    }
 }

@@ -47,12 +47,53 @@ class SleepStatisticsManager {
 
     private init() {}
 
+    // MARK: - Cache
+
+    private struct CacheKey: Hashable {
+        let signature: Int
+        let kind: String
+        let param: Int
+    }
+
+    private var cache: [CacheKey: [SleepStatistics]] = [:]
+
+    /// Call when records change to invalidate cached statistics.
+    func invalidateCache() {
+        cache.removeAll()
+    }
+
+    private func recordsSignature(_ records: [SleepRecord]) -> Int {
+        var hasher = Hasher()
+        hasher.combine(records.count)
+        for record in records {
+            hasher.combine(record.id)
+            hasher.combine(record.sleepTime.timeIntervalSince1970.bitPattern)
+            hasher.combine(record.wakeTime?.timeIntervalSince1970.bitPattern ?? 0)
+            hasher.combine(record.duration?.bitPattern ?? 0)
+        }
+        return hasher.finalize()
+    }
+
+    private func cached(records: [SleepRecord], kind: String, param: Int, compute: () -> [SleepStatistics]) -> [SleepStatistics] {
+        let key = CacheKey(signature: recordsSignature(records), kind: kind, param: param)
+        if let hit = cache[key] { return hit }
+        let result = compute()
+        cache[key] = result
+        return result
+    }
+
     private func referenceDate(for record: SleepRecord) -> Date? {
         record.wakeTime
     }
 
     // MARK: - 按天统计
     func dailyStatistics(from records: [SleepRecord], days: Int = 7) -> [SleepStatistics] {
+        cached(records: records, kind: "daily", param: days) {
+            _dailyStatistics(from: records, days: days)
+        }
+    }
+
+    private func _dailyStatistics(from records: [SleepRecord], days: Int) -> [SleepStatistics] {
         let calendar = Calendar.current
         let now = Date()
         var statistics: [SleepStatistics] = []
@@ -85,6 +126,12 @@ class SleepStatisticsManager {
 
     // MARK: - 按周统计
     func weeklyStatistics(from records: [SleepRecord], weeks: Int = 8) -> [SleepStatistics] {
+        cached(records: records, kind: "weekly", param: weeks) {
+            _weeklyStatistics(from: records, weeks: weeks)
+        }
+    }
+
+    private func _weeklyStatistics(from records: [SleepRecord], weeks: Int) -> [SleepStatistics] {
         let calendar = Calendar.current
         let now = Date()
         var statistics: [SleepStatistics] = []
@@ -120,6 +167,12 @@ class SleepStatisticsManager {
 
     // MARK: - 按月统计
     func monthlyStatistics(from records: [SleepRecord], months: Int = 12) -> [SleepStatistics] {
+        cached(records: records, kind: "monthly", param: months) {
+            _monthlyStatistics(from: records, months: months)
+        }
+    }
+
+    private func _monthlyStatistics(from records: [SleepRecord], months: Int) -> [SleepStatistics] {
         let calendar = Calendar.current
         let now = Date()
         var statistics: [SleepStatistics] = []
@@ -155,6 +208,12 @@ class SleepStatisticsManager {
 
     // MARK: - 按年统计
     func yearlyStatistics(from records: [SleepRecord], years: Int = 3) -> [SleepStatistics] {
+        cached(records: records, kind: "yearly", param: years) {
+            _yearlyStatistics(from: records, years: years)
+        }
+    }
+
+    private func _yearlyStatistics(from records: [SleepRecord], years: Int) -> [SleepStatistics] {
         let calendar = Calendar.current
         let now = Date()
         var statistics: [SleepStatistics] = []

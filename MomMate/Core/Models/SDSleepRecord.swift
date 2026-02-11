@@ -38,18 +38,12 @@ final class SDSleepRecord {
     }
     
     var formattedSleepTime: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: sleepTime)
+        DateFormatters.fullDateTimeZhCN.string(from: sleepTime)
     }
-    
+
     var formattedWakeTime: String? {
         guard let wakeTime = wakeTime else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: wakeTime)
+        return DateFormatters.fullDateTimeZhCN.string(from: wakeTime)
     }
     
     func relativeTimeString(from date: Date) -> String {

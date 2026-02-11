@@ -8,16 +8,61 @@
 
 import Foundation
 
+/// Protocol for managers that observe iCloud sync changes.
+/// Conformers get automatic observer setup/teardown via CloudSyncStore.
+protocol CloudSyncObserver: AnyObject {
+    var store: CloudSyncStore { get }
+    func reloadFromStore()
+    func pushCurrentDataToCloud()
+}
+
 final class CloudSyncStore {
     let storageKey: String
     let cloudStore = NSUbiquitousKeyValueStore.default
     var lastKnownCloudSyncEnabled: Bool
 
     private var syncWorkItem: DispatchWorkItem?
+    private var observerTokens: [NSObjectProtocol] = []
 
     init(storageKey: String) {
         self.storageKey = storageKey
         self.lastKnownCloudSyncEnabled = Self.computeCloudSyncEnabled()
+    }
+
+    // MARK: - Observer helpers
+
+    /// Sets up iCloud and UserDefaults change observers for a manager.
+    /// Call from init(), and call `teardownObservers()` in deinit.
+    func setupObservers(for observer: CloudSyncObserver) {
+        let cloudToken = NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: cloudStore,
+            queue: .main
+        ) { [weak observer] _ in
+            guard let observer, observer.store.isCloudSyncEnabled else { return }
+            observer.reloadFromStore()
+        }
+        let defaultsToken = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: UserDefaults.standard,
+            queue: .main
+        ) { [weak observer] _ in
+            guard let observer else { return }
+            let store = observer.store
+            let current = store.isCloudSyncEnabled
+            guard current != store.lastKnownCloudSyncEnabled else { return }
+            store.lastKnownCloudSyncEnabled = current
+            if current {
+                observer.pushCurrentDataToCloud()
+            }
+            observer.reloadFromStore()
+        }
+        observerTokens.append(contentsOf: [cloudToken, defaultsToken])
+    }
+
+    func teardownObservers() {
+        observerTokens.forEach { NotificationCenter.default.removeObserver($0) }
+        observerTokens.removeAll()
     }
 
     // MARK: - Cloud sync state
@@ -101,12 +146,32 @@ final class CloudSyncStore {
         debouncedSync()
     }
 
+    // MARK: - Sync status
+
+    private static let lastSyncKey = "sync.lastSyncTimestamp"
+
+    /// Timestamp of last successful sync. Shared across all stores.
+    static var lastSyncDate: Date? {
+        let ts = UserDefaults.standard.double(forKey: lastSyncKey)
+        return ts > 0 ? Date(timeIntervalSince1970: ts) : nil
+    }
+
+    static var lastSyncFormatted: String {
+        guard let date = lastSyncDate else { return "从未同步" }
+        return DateFormatters.fullDateTimeZhCN.string(from: date)
+    }
+
+    private func recordSyncTimestamp() {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastSyncKey)
+    }
+
     // MARK: - Debounced sync (1 second)
 
     private func debouncedSync() {
         syncWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
             self?.cloudStore.synchronize()
+            self?.recordSyncTimestamp()
         }
         syncWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)

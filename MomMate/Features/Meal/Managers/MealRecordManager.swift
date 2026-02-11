@@ -7,19 +7,22 @@
 
 import Foundation
 
-class MealRecordManager: ObservableObject {
+class MealRecordManager: ObservableObject, CloudSyncObserver {
     @Published var mealRecords: [MealRecord] = []
 
-    private let store = CloudSyncStore(storageKey: StorageKeys.mealRecords)
+    let store = CloudSyncStore(storageKey: StorageKeys.mealRecords)
 
     init() {
-        setupObservers()
+        store.setupObservers(for: self)
         loadMealRecords()
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        store.teardownObservers()
     }
+
+    func reloadFromStore() { loadMealRecords() }
+    func pushCurrentDataToCloud() { store.pushToCloud(mealRecords) }
 
     func addMealRecord(_ record: MealRecord) {
         mealRecords.insert(record, at: 0)
@@ -66,37 +69,4 @@ class MealRecordManager: ObservableObject {
         mealRecords = store.load([MealRecord].self) ?? []
     }
 
-    // MARK: - Observers
-
-    private func setupObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleCloudStoreDidChange(_:)),
-            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: store.cloudStore
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleUserDefaultsDidChange(_:)),
-            name: UserDefaults.didChangeNotification,
-            object: UserDefaults.standard
-        )
-    }
-
-    @objc
-    private func handleCloudStoreDidChange(_ notification: Notification) {
-        guard store.isCloudSyncEnabled else { return }
-        loadMealRecords()
-    }
-
-    @objc
-    private func handleUserDefaultsDidChange(_ notification: Notification) {
-        let current = store.isCloudSyncEnabled
-        guard current != store.lastKnownCloudSyncEnabled else { return }
-        store.lastKnownCloudSyncEnabled = current
-        if current {
-            store.pushToCloud(mealRecords)
-        }
-        loadMealRecords()
-    }
 }

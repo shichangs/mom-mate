@@ -7,7 +7,6 @@
 
 import Foundation
 import SwiftData
-import SwiftUI
 
 @Model
 final class SDMealRecord {
@@ -33,17 +32,11 @@ final class SDMealRecord {
     }
     
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: date)
+        DateFormatters.fullDateTimeZhCN.string(from: date)
     }
-    
+
     var formattedTime: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: date)
+        DateFormatters.time24ZhCN.string(from: date)
     }
     
     var relativeTime: String {

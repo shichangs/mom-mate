@@ -45,7 +45,7 @@ struct MealsTabView: View {
                     }
                 } else {
                     ScrollView {
-                        VStack(spacing: AppSpacing.xl) {
+                        LazyVStack(spacing: AppSpacing.xl) {
                             TodaySummaryCard(records: mealRecordManager.mealRecordsForToday())
 
                             FoodListEntryCard {
@@ -54,7 +54,7 @@ struct MealsTabView: View {
 
                             MealFilterBar(selectedType: $selectedMealType)
 
-                            VStack(spacing: AppSpacing.sm) {
+                            LazyVStack(spacing: AppSpacing.sm) {
                                 ForEach(filteredRecords) { record in
                                     MealRecordCardView(record: record)
                                         .contextMenu {
@@ -64,6 +64,8 @@ struct MealsTabView: View {
                                                 Label("删除", systemImage: "trash")
                                             }
                                         }
+                                        .accessibilityElement(children: .combine)
+                                        .accessibilityLabel("\(record.mealType.rawValue)记录，\(record.formattedTime)")
                                 }
                             }
                         }
@@ -158,8 +160,11 @@ enum FoodCatalogStore {
     ]
 
     static func load(from data: Data) -> [String] {
-        if let decoded = try? JSONDecoder().decode([String].self, from: data), !decoded.isEmpty {
-            return normalized(decoded)
+        do {
+            let decoded = try JSONDecoder().decode([String].self, from: data)
+            if !decoded.isEmpty { return normalized(decoded) }
+        } catch {
+            print("[MomMate] Failed to load food catalog: \(error.localizedDescription)")
         }
 
         let legacy = (UserDefaults.standard.data(forKey: legacyKey)).flatMap {
@@ -170,7 +175,12 @@ enum FoodCatalogStore {
     }
 
     static func save(_ foods: [String]) -> Data? {
-        try? JSONEncoder().encode(normalized(foods))
+        do {
+            return try JSONEncoder().encode(normalized(foods))
+        } catch {
+            print("[MomMate] Failed to save food catalog: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     private static func normalized(_ foods: [String]) -> [String] {

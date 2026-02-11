@@ -69,27 +69,45 @@ struct SettingsView: View {
                                 .foregroundColor(AppColors.textSecondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                            HStack {
-                                Image(systemName: "icloud.fill")
-                                    .font(.system(size: 22))
-                                    .foregroundColor(cloudSyncEnabled ? AppColors.primary : AppColors.textTertiary)
+                            VStack(spacing: 0) {
+                                HStack {
+                                    Image(systemName: "icloud.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundColor(cloudSyncEnabled ? AppColors.primary : AppColors.textTertiary)
 
-                                VStack(alignment: .leading, spacing: AppSpacing.xxs) {
-                                    Text("iCloud 云端同步")
-                                        .font(AppTypography.bodyMedium)
-                                        .foregroundColor(AppColors.textPrimary)
-                                    Text(cloudSyncEnabled ? "数据将在您的设备间自动同步" : "同步已关闭")
-                                        .font(AppTypography.caption)
-                                        .foregroundColor(AppColors.textSecondary)
+                                    VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                                        Text("iCloud 云端同步")
+                                            .font(AppTypography.bodyMedium)
+                                            .foregroundColor(AppColors.textPrimary)
+                                        Text(cloudSyncEnabled ? "数据将在您的设备间自动同步" : "同步已关闭")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textSecondary)
+                                    }
+
+                                    Spacer()
+
+                                    Toggle("", isOn: $cloudSyncEnabled)
+                                        .labelsHidden()
+                                        .tint(AppColors.primary)
                                 }
+                                .padding(AppSpacing.md)
 
-                                Spacer()
-
-                                Toggle("", isOn: $cloudSyncEnabled)
-                                    .labelsHidden()
-                                    .tint(AppColors.primary)
+                                if cloudSyncEnabled {
+                                    Divider()
+                                        .padding(.leading, AppSpacing.md)
+                                    HStack {
+                                        Image(systemName: "clock.arrow.circlepath")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(AppColors.textTertiary)
+                                        Text("上次同步：\(CloudSyncStore.lastSyncFormatted)")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textTertiary)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, AppSpacing.md)
+                                    .padding(.vertical, AppSpacing.xs)
+                                }
                             }
-                            .padding(AppSpacing.md)
                             .background(AppColors.surface)
                             .cornerRadius(AppRadius.lg)
                             .overlay(

@@ -7,13 +7,13 @@
 
 import Foundation
 
-class NotesManager: ObservableObject {
+class NotesManager: ObservableObject, CloudSyncObserver {
     @Published var notes: String = ""
 
-    private let store = CloudSyncStore(storageKey: StorageKeys.notes)
+    let store = CloudSyncStore(storageKey: StorageKeys.notes)
 
     init() {
-        setupObservers()
+        store.setupObservers(for: self)
         loadNotes()
         if notes.isEmpty {
             initializeDefaultNotes()
@@ -21,8 +21,11 @@ class NotesManager: ObservableObject {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        store.teardownObservers()
     }
+
+    func reloadFromStore() { loadNotes() }
+    func pushCurrentDataToCloud() { store.pushStringToCloud(notes) }
 
     func saveNotes() {
         store.saveString(notes)
@@ -38,45 +41,9 @@ class NotesManager: ObservableObject {
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.locale = Locale(identifier: "zh_CN")
-        return formatter.string(from: date)
+        DateFormatters.fullDateTimeZhCN.string(from: date)
     }
 
-    // MARK: - Observers
-
-    private func setupObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleCloudStoreDidChange(_:)),
-            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: store.cloudStore
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleUserDefaultsDidChange(_:)),
-            name: UserDefaults.didChangeNotification,
-            object: UserDefaults.standard
-        )
-    }
-
-    @objc
-    private func handleCloudStoreDidChange(_ notification: Notification) {
-        guard store.isCloudSyncEnabled else { return }
-        loadNotes()
-    }
-
-    @objc
-    private func handleUserDefaultsDidChange(_ notification: Notification) {
-        let current = store.isCloudSyncEnabled
-        guard current != store.lastKnownCloudSyncEnabled else { return }
-        store.lastKnownCloudSyncEnabled = current
-        if current {
-            store.pushStringToCloud(notes)
-        }
-        loadNotes()
-    }
 
     // MARK: - Default content
 

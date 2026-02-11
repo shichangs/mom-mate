@@ -7,13 +7,13 @@
 
 import Foundation
 
-class SleepRecordManager: ObservableObject {
+class SleepRecordManager: ObservableObject, CloudSyncObserver {
     @Published var records: [SleepRecord] = []
 
-    private let store = CloudSyncStore(storageKey: StorageKeys.sleepRecords)
+    let store = CloudSyncStore(storageKey: StorageKeys.sleepRecords)
 
     init() {
-        setupObservers()
+        store.setupObservers(for: self)
         loadRecords()
 #if DEBUG
         if records.isEmpty && !UserDefaults.standard.bool(forKey: StorageKeys.testDataGenerated) {
@@ -24,8 +24,11 @@ class SleepRecordManager: ObservableObject {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        store.teardownObservers()
     }
+
+    func reloadFromStore() { loadRecords() }
+    func pushCurrentDataToCloud() { store.pushToCloud(records) }
 
     func startSleep() {
         guard currentSleepRecord == nil else { return }
@@ -100,10 +103,12 @@ class SleepRecordManager: ObservableObject {
 
     private func saveRecords() {
         store.save(records)
+        SleepStatisticsManager.shared.invalidateCache()
     }
 
     private func loadRecords() {
         records = store.load([SleepRecord].self) ?? []
+        SleepStatisticsManager.shared.invalidateCache()
     }
 
     // MARK: - Test data generation
@@ -164,37 +169,4 @@ class SleepRecordManager: ObservableObject {
         saveRecords()
     }
 
-    // MARK: - Observers
-
-    private func setupObservers() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleCloudStoreDidChange(_:)),
-            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: store.cloudStore
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleUserDefaultsDidChange(_:)),
-            name: UserDefaults.didChangeNotification,
-            object: UserDefaults.standard
-        )
-    }
-
-    @objc
-    private func handleCloudStoreDidChange(_ notification: Notification) {
-        guard store.isCloudSyncEnabled else { return }
-        loadRecords()
-    }
-
-    @objc
-    private func handleUserDefaultsDidChange(_ notification: Notification) {
-        let current = store.isCloudSyncEnabled
-        guard current != store.lastKnownCloudSyncEnabled else { return }
-        store.lastKnownCloudSyncEnabled = current
-        if current {
-            store.pushToCloud(records)
-        }
-        loadRecords()
-    }
 }

@@ -246,6 +246,8 @@ struct SleepingStatusCard: View {
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle(color: AppColors.accent))
+                .accessibilityLabel("记录宝宝醒来")
+                .accessibilityHint("点击标记宝宝已醒来")
 
                 Button(action: onWakeUpCustom) {
                     Text("选择其他时间")
@@ -309,6 +311,8 @@ struct AwakeStatusCard: View {
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle(color: AppColors.sleep))
+                .accessibilityLabel("记录宝宝入睡")
+                .accessibilityHint("点击标记宝宝已入睡")
 
                 Button(action: onSleepCustom) {
                     Text("选择其他时间")
