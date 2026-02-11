@@ -9,38 +9,31 @@ import Foundation
 
 class SleepRecordManager: ObservableObject {
     @Published var records: [SleepRecord] = []
-    
-    private let recordsKey = "SleepRecords"
-    private let testDataGeneratedKey = "TestDataGenerated"
-    private let cloudSyncEnabledKey = "cloudSyncEnabled"
-    private let syncAuthorizedKey = "sync.auth.enabled.v1"
-    private let cloudStore = NSUbiquitousKeyValueStore.default
-    private var lastKnownCloudSyncEnabled = (UserDefaults.standard.object(forKey: "cloudSyncEnabled") as? Bool ?? true)
-        && UserDefaults.standard.bool(forKey: "sync.auth.enabled.v1")
-    
+
+    private let store = CloudSyncStore(storageKey: StorageKeys.sleepRecords)
+
     init() {
         setupObservers()
         loadRecords()
 #if DEBUG
-        // 如果没有数据且未生成过测试数据，则生成测试数据
-        if records.isEmpty && !UserDefaults.standard.bool(forKey: testDataGeneratedKey) {
+        if records.isEmpty && !UserDefaults.standard.bool(forKey: StorageKeys.testDataGenerated) {
             generateTestData()
-            UserDefaults.standard.set(true, forKey: testDataGeneratedKey)
+            UserDefaults.standard.set(true, forKey: StorageKeys.testDataGenerated)
         }
 #endif
     }
-    
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    
+
     func startSleep() {
         guard currentSleepRecord == nil else { return }
         let newRecord = SleepRecord(sleepTime: Date())
         records.insert(newRecord, at: 0)
         saveRecords()
     }
-    
+
     func startSleep(minutesAgo: Int) {
         guard currentSleepRecord == nil else { return }
         let sleepTime = Calendar.current.date(byAdding: .minute, value: -minutesAgo, to: Date()) ?? Date()
@@ -48,7 +41,7 @@ class SleepRecordManager: ObservableObject {
         records.insert(newRecord, at: 0)
         saveRecords()
     }
-    
+
     func endSleep(for record: SleepRecord) {
         if let index = records.firstIndex(where: { $0.id == record.id }) {
             let updatedRecord = SleepRecord(sleepTime: record.sleepTime, wakeTime: Date())
@@ -56,13 +49,13 @@ class SleepRecordManager: ObservableObject {
             saveRecords()
         }
     }
-    
+
     func endCurrentSleep() {
         if let currentRecord = records.first, currentRecord.isSleeping {
             endSleep(for: currentRecord)
         }
     }
-    
+
     func endCurrentSleep(minutesAgo: Int) {
         if let currentRecord = records.first, currentRecord.isSleeping {
             let wakeTime = Calendar.current.date(byAdding: .minute, value: -minutesAgo, to: Date()) ?? Date()
@@ -74,157 +67,112 @@ class SleepRecordManager: ObservableObject {
             }
         }
     }
-    
+
     func deleteRecord(_ record: SleepRecord) {
         records.removeAll { $0.id == record.id }
         saveRecords()
     }
-    
+
     func updateRecord(_ record: SleepRecord, sleepTime: Date, wakeTime: Date?) {
         if let index = records.firstIndex(where: { $0.id == record.id }) {
-            // 保持原有的 ID
             let recordWithSameId = SleepRecord(id: record.id, sleepTime: sleepTime, wakeTime: wakeTime)
             records[index] = recordWithSameId
             saveRecords()
         }
     }
-    
+
     func updateRecord(_ record: SleepRecord) {
         if let index = records.firstIndex(where: { $0.id == record.id }) {
             records[index] = record
             saveRecords()
         }
     }
-    
+
     var currentSleepRecord: SleepRecord? {
         return records.first { $0.isSleeping }
     }
-    
+
     var completedRecords: [SleepRecord] {
         return records.filter { !$0.isSleeping }
     }
-    
+
+    // MARK: - Persistence (via CloudSyncStore)
+
     private func saveRecords() {
-        guard let encoded = try? JSONEncoder().encode(records) else { return }
-        UserDefaults.standard.set(encoded, forKey: recordsKey)
-        if isCloudSyncEnabled {
-            cloudStore.set(encoded, forKey: recordsKey)
-            cloudStore.synchronize()
-        }
+        store.save(records)
     }
-    
+
     private func loadRecords() {
-        let data: Data?
-        if isCloudSyncEnabled {
-            cloudStore.synchronize()
-            data = cloudStore.data(forKey: recordsKey) ?? UserDefaults.standard.data(forKey: recordsKey)
-        } else {
-            data = UserDefaults.standard.data(forKey: recordsKey)
-        }
-        
-        guard let data,
-              let decoded = try? JSONDecoder().decode([SleepRecord].self, from: data) else {
-            records = []
-            return
-        }
-        records = decoded
+        records = store.load([SleepRecord].self) ?? []
     }
-    
-    // MARK: - 测试数据生成
+
+    // MARK: - Test data generation
+
     func generateTestData() {
         let calendar = Calendar.current
         let now = Date()
         var testRecords: [SleepRecord] = []
-        
-        // 生成过去3个月的数据，确保有足够的数据展示统计效果
+
         for monthOffset in 0..<3 {
             guard let monthStart = calendar.date(byAdding: .month, value: -monthOffset, to: now),
                   let monthDate = calendar.date(from: calendar.dateComponents([.year, .month], from: monthStart)) else { continue }
-            
-            // 每个月生成25-30条记录
+
             let recordsPerMonth = Int.random(in: 25...30)
-            
+
             for _ in 0..<recordsPerMonth {
-                // 随机选择这个月中的某一天（避免选择未来日期）
                 let daysInMonth = calendar.range(of: .day, in: .month, for: monthDate)?.count ?? 30
                 let maxDay = monthOffset == 0 ? calendar.component(.day, from: now) : daysInMonth
                 let randomDay = Int.random(in: 1...maxDay)
-                
+
                 guard let recordDate = calendar.date(byAdding: .day, value: randomDay - 1, to: monthDate) else { continue }
-                
-                // 确保日期不超过今天
-                if recordDate > now {
-                    continue
-                }
-                
-                // 随机选择时间：晚上8点到11点之间入睡
+                if recordDate > now { continue }
+
                 let sleepHour = Int.random(in: 20...23)
                 let sleepMinute = Int.random(in: 0...59)
-                
+
                 guard var sleepTime = calendar.date(bySettingHour: sleepHour, minute: sleepMinute, second: 0, of: recordDate) else { continue }
-                
-                // 如果时间在未来，则往前推一天
                 if sleepTime > now {
                     sleepTime = calendar.date(byAdding: .day, value: -1, to: sleepTime) ?? sleepTime
                 }
-                
-                // 睡眠时长：6-12小时之间，更真实的数据分布
+
                 let sleepDurationHours = Double.random(in: 7.0...11.5)
                 let sleepDuration = sleepDurationHours * 3600
-                
+
                 guard let wakeTime = calendar.date(byAdding: .second, value: Int(sleepDuration), to: sleepTime) else { continue }
-                
-                // 确保醒来时间不超过现在
                 let finalWakeTime = wakeTime > now ? now : wakeTime
-                
-                // 确保醒来时间晚于入睡时间
+
                 if finalWakeTime > sleepTime {
                     let record = SleepRecord(sleepTime: sleepTime, wakeTime: finalWakeTime)
                     testRecords.append(record)
                 }
             }
         }
-        
-        // 按时间倒序排列（最新的在前）
+
         testRecords.sort { $0.sleepTime > $1.sleepTime }
-        
         records = testRecords
         saveRecords()
     }
-    
-    // 重新生成测试数据（用于测试）
+
     func regenerateTestData() {
         records = []
         generateTestData()
-        UserDefaults.standard.set(true, forKey: testDataGeneratedKey)
+        UserDefaults.standard.set(true, forKey: StorageKeys.testDataGenerated)
     }
-    
-    // 清除所有数据（包括测试数据）
+
     func clearAllData() {
         records = []
         saveRecords()
     }
-    
-    private var isCloudSyncEnabled: Bool {
-        let cloudSyncEnabled = UserDefaults.standard.object(forKey: cloudSyncEnabledKey) as? Bool ?? true
-        let syncAuthorized = UserDefaults.standard.bool(forKey: syncAuthorizedKey)
-        return cloudSyncEnabled && syncAuthorized
-    }
-    
-    private func pushCurrentRecordsToCloud() {
-        guard let encoded = try? JSONEncoder().encode(records) else { return }
-        cloudStore.set(encoded, forKey: recordsKey)
-        cloudStore.synchronize()
-    }
-    
+
+    // MARK: - Observers
+
     private func setupObservers() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleCloudStoreDidChange(_:)),
             name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: cloudStore
+            object: store.cloudStore
         )
-        
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleUserDefaultsDidChange(_:)),
@@ -232,21 +180,20 @@ class SleepRecordManager: ObservableObject {
             object: UserDefaults.standard
         )
     }
-    
+
     @objc
     private func handleCloudStoreDidChange(_ notification: Notification) {
-        guard isCloudSyncEnabled else { return }
+        guard store.isCloudSyncEnabled else { return }
         loadRecords()
     }
-    
+
     @objc
     private func handleUserDefaultsDidChange(_ notification: Notification) {
-        let current = isCloudSyncEnabled
-        guard current != lastKnownCloudSyncEnabled else { return }
-        lastKnownCloudSyncEnabled = current
-        
+        let current = store.isCloudSyncEnabled
+        guard current != store.lastKnownCloudSyncEnabled else { return }
+        store.lastKnownCloudSyncEnabled = current
         if current {
-            pushCurrentRecordsToCloud()
+            store.pushToCloud(records)
         }
         loadRecords()
     }

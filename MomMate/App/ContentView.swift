@@ -2,7 +2,8 @@
 //  ContentView.swift
 //  MomMate
 //
-//  Main content view - now serves as entry point to MainTabView
+//  Main content view - entry point to MainTabView
+//  Auth types and views used by SettingsView
 //
 
 import SwiftUI
@@ -40,44 +41,38 @@ final class AuthManager: ObservableObject {
     @Published private(set) var isAuthenticated = false
     @Published private(set) var displayName: String?
     @Published private(set) var provider: AuthProvider?
-    
+
     private let defaults = UserDefaults.standard
-    private let sessionStoreKey = "auth.social_session.v1"
-    private let syncAuthorizedKey = "sync.auth.enabled.v1"
-    private let sleepRecordsKey = "SleepRecords"
-    private let mealRecordsKey = "MealRecords"
-    private let milestonesKey = "Milestones"
-    private let notesKey = "AppNotes"
-    
+
     init() {
         restoreSession()
     }
-    
+
     var syncButtonTitle: String {
         isAuthenticated ? "同步已开启\(userBadge)" : "登录以同步"
     }
-    
+
     var syncButtonIcon: String {
         isAuthenticated ? "checkmark.icloud.fill" : "icloud"
     }
-    
+
     var syncButtonColor: Color {
         isAuthenticated ? AppColors.accent : AppColors.textSecondary
     }
-    
+
     var userBadge: String {
         guard let provider else { return "" }
         let name = displayName ?? "\(provider.rawValue)用户"
         return " · \(name)"
     }
-    
+
     func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) -> String? {
         switch result {
         case .success(let authorization):
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
                 return "无法获取 Apple 登录凭证"
             }
-            
+
             let formatter = PersonNameComponentsFormatter()
             let fullName = credential.fullName.flatMap { formatter.string(from: $0) } ?? ""
             let nameCandidate = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -98,15 +93,15 @@ final class AuthManager: ObservableObject {
             return "Apple 登录失败，请稍后重试"
         }
     }
-    
+
     func startGoogleSignIn() -> String? {
         notConfiguredMessage(for: .google)
     }
-    
+
     func startWeChatSignIn() -> String? {
         notConfiguredMessage(for: .wechat)
     }
-    
+
 #if DEBUG
     func debugMockSignIn() {
         let mockSession = SocialSession(
@@ -117,63 +112,63 @@ final class AuthManager: ObservableObject {
         saveSession(mockSession)
     }
 #endif
-    
+
     func logout() {
         isAuthenticated = false
         displayName = nil
         provider = nil
-        defaults.removeObject(forKey: sessionStoreKey)
-        defaults.set(false, forKey: syncAuthorizedKey)
+        defaults.removeObject(forKey: StorageKeys.sessionStore)
+        defaults.set(false, forKey: StorageKeys.syncAuthorized)
     }
-    
+
     private func restoreSession() {
-        guard let data = defaults.data(forKey: sessionStoreKey),
+        guard let data = defaults.data(forKey: StorageKeys.sessionStore),
               let session = try? JSONDecoder().decode(SocialSession.self, from: data) else {
-            defaults.set(false, forKey: syncAuthorizedKey)
+            defaults.set(false, forKey: StorageKeys.syncAuthorized)
             return
         }
-        
+
         applySession(session)
-        defaults.set(true, forKey: syncAuthorizedKey)
+        defaults.set(true, forKey: StorageKeys.syncAuthorized)
     }
-    
+
     private func saveSession(_ session: SocialSession) {
         guard let data = try? JSONEncoder().encode(session) else { return }
-        defaults.set(data, forKey: sessionStoreKey)
-        defaults.set(true, forKey: syncAuthorizedKey)
+        defaults.set(data, forKey: StorageKeys.sessionStore)
+        defaults.set(true, forKey: StorageKeys.syncAuthorized)
         captureFirstSyncSnapshotIfNeeded(userID: session.userID)
         applySession(session)
     }
-    
+
     private func applySession(_ session: SocialSession) {
         provider = session.provider
         displayName = session.displayName
         isAuthenticated = true
     }
-    
+
     private func notConfiguredMessage(for provider: AuthProvider) -> String {
         "\(provider.rawValue) 登录已接入入口，需先配置该平台的 Client ID / AppID 和回调 URL。"
     }
-    
+
     private func captureFirstSyncSnapshotIfNeeded(userID: String) {
         let escapedUserID = userID.replacingOccurrences(of: ".", with: "_")
         let markerKey = "sync.initialMigration.done.\(escapedUserID)"
         guard !defaults.bool(forKey: markerKey) else { return }
-        
+
         let snapshot = LocalDataSnapshot(
-            sleepRecordCount: decodeArrayCount(forKey: sleepRecordsKey),
-            mealRecordCount: decodeArrayCount(forKey: mealRecordsKey),
-            milestoneCount: decodeArrayCount(forKey: milestonesKey),
-            hasNotes: !(defaults.string(forKey: notesKey) ?? "").isEmpty,
+            sleepRecordCount: decodeArrayCount(forKey: StorageKeys.sleepRecords),
+            mealRecordCount: decodeArrayCount(forKey: StorageKeys.mealRecords),
+            milestoneCount: decodeArrayCount(forKey: StorageKeys.milestones),
+            hasNotes: !(defaults.string(forKey: StorageKeys.notes) ?? "").isEmpty,
             capturedAt: Date()
         )
-        
+
         if let data = try? JSONEncoder().encode(snapshot) {
             defaults.set(data, forKey: "sync.initialMigration.snapshot.\(escapedUserID)")
         }
         defaults.set(true, forKey: markerKey)
     }
-    
+
     private func decodeArrayCount(forKey key: String) -> Int {
         guard let data = defaults.data(forKey: key),
               let object = try? JSONSerialization.jsonObject(with: data),
@@ -182,18 +177,19 @@ final class AuthManager: ObservableObject {
     }
 }
 
+// MARK: - 认证视图
 struct AuthView: View {
     @ObservedObject var authManager: AuthManager
     @Binding var showingSheet: Bool
-    
+
     @State private var errorMessage: String?
-    
+
     var body: some View {
         NavigationView {
             ZStack {
                 AppColors.backgroundGradient
                     .ignoresSafeArea()
-                
+
                 VStack(spacing: AppSpacing.lg) {
                     VStack(spacing: AppSpacing.xs) {
                         Image(systemName: "person.badge.key.fill")
@@ -205,7 +201,7 @@ struct AuthView: View {
                             .font(AppTypography.subhead)
                             .foregroundColor(AppColors.textSecondary)
                     }
-                    
+
                     if authManager.isAuthenticated {
                         VStack(spacing: AppSpacing.md) {
                             HStack {
@@ -218,7 +214,7 @@ struct AuthView: View {
                             .padding(AppSpacing.md)
                             .background(AppColors.surface)
                             .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
-                            
+
                             Button(role: .destructive) {
                                 authManager.logout()
                             } label: {
@@ -243,7 +239,7 @@ struct AuthView: View {
                             .signInWithAppleButtonStyle(.black)
                             .frame(height: 50)
                             .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
-                            
+
                             Button {
                                 errorMessage = authManager.startGoogleSignIn()
                             } label: {
@@ -258,7 +254,7 @@ struct AuthView: View {
                                 .background(AppColors.surface)
                                 .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
                             }
-                            
+
                             Button {
                                 errorMessage = authManager.startWeChatSignIn()
                             } label: {
@@ -273,7 +269,7 @@ struct AuthView: View {
                                 .background(AppColors.surface)
                                 .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
                             }
-                            
+
 #if DEBUG
                             Button {
                                 authManager.debugMockSignIn()
@@ -292,20 +288,20 @@ struct AuthView: View {
                             }
 #endif
                         }
-                        
+
                         Text("已支持 Apple 原生登录；Google/微信需先完成平台参数配置。")
                             .font(AppTypography.footnote)
                             .foregroundColor(AppColors.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    
+
                     if let errorMessage, !errorMessage.isEmpty {
                         Text(errorMessage)
                             .font(AppTypography.footnote)
                             .foregroundColor(.red)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    
+
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, AppSpacing.xl)
@@ -328,13 +324,13 @@ struct HistoryView: View {
     @ObservedObject var recordManager: SleepRecordManager
     @Environment(\.dismiss) var dismiss
     @State private var editingRecord: SleepRecord?
-    
+
     var body: some View {
         NavigationView {
             ZStack {
                 AppColors.backgroundGradient
                     .ignoresSafeArea()
-                
+
                 if recordManager.completedRecords.isEmpty {
                     EmptyStateView(
                         icon: "moon.zzz",
@@ -367,11 +363,9 @@ struct HistoryView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
-                        dismiss()
-                    }
-                    .font(AppTypography.bodyMedium)
-                    .foregroundColor(AppColors.primary)
+                    Button("完成") { dismiss() }
+                        .font(AppTypography.bodyMedium)
+                        .foregroundColor(AppColors.primary)
                 }
             }
             .sheet(item: $editingRecord) { record in
@@ -384,10 +378,9 @@ struct HistoryView: View {
 // MARK: - 历史记录卡片
 struct HistoryRecordCard: View {
     let record: SleepRecord
-    
+
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            // 日期图标
             VStack(spacing: 2) {
                 Text(dayOfMonth)
                     .font(AppTypography.title2)
@@ -397,13 +390,12 @@ struct HistoryRecordCard: View {
                     .foregroundColor(AppColors.textSecondary)
             }
             .frame(width: 48)
-            
-            // 详情
+
             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                 HStack(spacing: AppSpacing.xs) {
                     Text(record.formattedSleepTime)
                         .font(AppTypography.calloutMedium)
-                    
+
                     if let wakeTime = record.formattedWakeTime {
                         Image(systemName: "arrow.right")
                             .font(.system(size: 10, weight: .bold))
@@ -413,16 +405,16 @@ struct HistoryRecordCard: View {
                     }
                 }
                 .foregroundColor(AppColors.textPrimary)
-                
+
                 HStack(spacing: AppSpacing.sm) {
                     Label(record.formattedDuration, systemImage: "clock.fill")
                         .font(AppTypography.footnote)
                         .foregroundColor(AppColors.textSecondary)
                 }
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(AppColors.textTertiary)
@@ -437,11 +429,11 @@ struct HistoryRecordCard: View {
             y: AppShadow.small.y
         )
     }
-    
+
     private var dayOfMonth: String {
         DateFormatters.dayNumber.string(from: record.sleepTime)
     }
-    
+
     private var monthAbbrev: String {
         DateFormatters.monthZh.string(from: record.sleepTime)
     }
@@ -452,17 +444,17 @@ struct EditRecordView: View {
     let record: SleepRecord
     @ObservedObject var recordManager: SleepRecordManager
     @Environment(\.dismiss) var dismiss
-    
+
     @State private var sleepTime: Date
     @State private var wakeTime: Date
-    
+
     init(record: SleepRecord, recordManager: SleepRecordManager) {
         self.record = record
         self.recordManager = recordManager
         _sleepTime = State(initialValue: record.sleepTime)
         _wakeTime = State(initialValue: record.wakeTime ?? Date())
     }
-    
+
     var body: some View {
         NavigationView {
             Form {
@@ -470,7 +462,7 @@ struct EditRecordView: View {
                     DatePicker("入睡时间", selection: $sleepTime, in: ...Date())
                     DatePicker("醒来时间", selection: $wakeTime, in: sleepTime...Date())
                 }
-                
+
                 Section {
                     HStack {
                         Text("睡眠时长")
@@ -479,7 +471,7 @@ struct EditRecordView: View {
                             .foregroundColor(AppColors.primary)
                     }
                 }
-                
+
                 Section {
                     Button(role: .destructive) {
                         recordManager.deleteRecord(record)
@@ -497,26 +489,22 @@ struct EditRecordView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
-                        dismiss()
-                    }
+                    Button("取消") { dismiss() }
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("保存") {
-                        saveChanges()
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(!canSave)
+                    Button("保存") { saveChanges() }
+                        .fontWeight(.semibold)
+                        .disabled(!canSave)
                 }
             }
         }
     }
-    
+
     private var canSave: Bool {
         wakeTime > sleepTime
     }
-    
+
     private var formattedDuration: String {
         let duration = wakeTime.timeIntervalSince(sleepTime)
         let hours = Int(duration) / 3600
@@ -526,7 +514,7 @@ struct EditRecordView: View {
         }
         return "\(minutes)分钟"
     }
-    
+
     private func saveChanges() {
         guard canSave else { return }
         var updatedRecord = record
