@@ -23,6 +23,10 @@
 		A1234567890123456789016J /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789016K /* DesignSystem.swift */; };
 		A1234567890123456789017A /* CloudSyncStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789017B /* CloudSyncStore.swift */; };
 		A1234567890123456789017C /* StorageKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789017D /* StorageKeys.swift */; };
+		A1234567890123456789018A /* SleepTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789018B /* SleepTabView.swift */; };
+		A1234567890123456789018C /* MealsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789018D /* MealsTabView.swift */; };
+		A1234567890123456789018E /* StatisticsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789018F /* StatisticsTabView.swift */; };
+		A1234567890123456789018G /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789018H /* SettingsView.swift */; };
 		A1234567890123456789013C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013D /* Assets.xcassets */; };
 		A1234567890123456789013E /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013F /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -44,6 +48,10 @@
 		A1234567890123456789016K /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Design/DesignSystem.swift; sourceTree = "<group>"; };
 		A1234567890123456789017B /* CloudSyncStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/CloudSyncStore.swift; sourceTree = "<group>"; };
 		A1234567890123456789017D /* StorageKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/StorageKeys.swift; sourceTree = "<group>"; };
+		A1234567890123456789018B /* SleepTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Sleep/Views/SleepTabView.swift; sourceTree = "<group>"; };
+		A1234567890123456789018D /* MealsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Meal/Views/MealsTabView.swift; sourceTree = "<group>"; };
+		A1234567890123456789018F /* StatisticsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Statistics/Views/StatisticsTabView.swift; sourceTree = "<group>"; };
+		A1234567890123456789018H /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Settings/Views/SettingsView.swift; sourceTree = "<group>"; };
 		A1234567890123456789013D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1234567890123456789013F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1234567890123456789014A /* MomMate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MomMate.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -87,6 +95,10 @@
 				A1234567890123456789016K /* DesignSystem.swift */,
 				A1234567890123456789017B /* CloudSyncStore.swift */,
 				A1234567890123456789017D /* StorageKeys.swift */,
+				A1234567890123456789018B /* SleepTabView.swift */,
+				A1234567890123456789018D /* MealsTabView.swift */,
+				A1234567890123456789018F /* StatisticsTabView.swift */,
+				A1234567890123456789018H /* SettingsView.swift */,
 				A1234567890123456789013D /* Assets.xcassets */,
 				A1234567890123456789014F /* Preview Content */,
 			);
@@ -194,6 +206,10 @@
 				A1234567890123456789016J /* DesignSystem.swift in Sources */,
 				A1234567890123456789017A /* CloudSyncStore.swift in Sources */,
 				A1234567890123456789017C /* StorageKeys.swift in Sources */,
+				A1234567890123456789018A /* SleepTabView.swift in Sources */,
+				A1234567890123456789018C /* MealsTabView.swift in Sources */,
+				A1234567890123456789018E /* StatisticsTabView.swift in Sources */,
+				A1234567890123456789018G /* SettingsView.swift in Sources */,
 				A1234567890123456789012A /* MomMateApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
