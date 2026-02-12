@@ -94,3 +94,21 @@ extension MealType {
     }
 }
 
+struct FoodItem: Identifiable, Codable, Hashable {
+    let id: UUID
+    var name: String
+    var sortOrder: Int
+    var isArchived: Bool
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        sortOrder: Int,
+        isArchived: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.sortOrder = sortOrder
+        self.isArchived = isArchived
+    }
+}

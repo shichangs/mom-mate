@@ -11,17 +11,16 @@ struct SleepRecord: Identifiable, Codable {
     let id: UUID
     var sleepTime: Date
     var wakeTime: Date?
-    var duration: TimeInterval?
     
     init(id: UUID = UUID(), sleepTime: Date, wakeTime: Date? = nil) {
         self.id = id
         self.sleepTime = sleepTime
         self.wakeTime = wakeTime
-        if let wakeTime = wakeTime {
-            self.duration = wakeTime.timeIntervalSince(sleepTime)
-        } else {
-            self.duration = nil
-        }
+    }
+
+    var duration: TimeInterval? {
+        guard let wakeTime else { return nil }
+        return wakeTime.timeIntervalSince(sleepTime)
     }
     
     var isSleeping: Bool {

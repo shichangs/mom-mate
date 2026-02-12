@@ -26,4 +26,6 @@ enum StorageKeys {
     // Food catalog
     static let foodCatalog = "foodCatalog"
     static let customFoods = "customFoods"
+    static let legacySavedFoodList = "savedFoodList"
+    static let legacyFoodListInitialized = "foodListInitialized"
 }

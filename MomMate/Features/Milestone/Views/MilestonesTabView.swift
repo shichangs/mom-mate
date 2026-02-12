@@ -15,11 +15,10 @@ struct MilestonesTabView: View {
     @AppStorage(StorageKeys.fontSizeFactor) private var fontSizeFactor: Double = 1.0
 
     private var filteredMilestones: [Milestone] {
-        let sorted = milestoneManager.sortedMilestones
         if let category = selectedCategory {
-            return sorted.filter { $0.category == category }
+            return milestoneManager.milestonesByCategory(category)
         }
-        return sorted
+        return milestoneManager.sortedMilestones
     }
 
     var body: some View {
@@ -36,14 +35,14 @@ struct MilestonesTabView: View {
                         // 分类筛选
                         MilestoneCategoryFilter(
                             selectedCategory: $selectedCategory,
-                            milestones: milestoneManager.milestones
+                            milestoneManager: milestoneManager
                         )
 
                         // 时间线
                         if filteredMilestones.isEmpty {
                             VStack(spacing: AppSpacing.lg) {
                                 let totalKey = MilestoneCategory.allCases.count
-                                let recorded = Set(milestoneManager.milestones.map { $0.category }).count
+                                let recorded = milestoneManager.unlockedCategoryCount
                                 ProgressRing(
                                     progress: Double(recorded) / Double(totalKey),
                                     color: AppColors.milestone,
@@ -154,14 +153,14 @@ struct QuickMilestoneRow: View {
 // MARK: - 分类筛选
 struct MilestoneCategoryFilter: View {
     @Binding var selectedCategory: MilestoneCategory?
-    let milestones: [Milestone]
+    let milestoneManager: MilestoneManager
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppSpacing.xs) {
                 FilterChip(
                     title: "全部",
-                    count: milestones.count,
+                    count: milestoneManager.milestones.count,
                     isSelected: selectedCategory == nil,
                     color: AppColors.milestone
                 ) {
@@ -169,7 +168,7 @@ struct MilestoneCategoryFilter: View {
                 }
 
                 ForEach(MilestoneCategory.allCases, id: \.self) { category in
-                    let count = milestones.filter { $0.category == category }.count
+                    let count = milestoneManager.milestoneCount(for: category)
                     if count > 0 {
                         FilterChip(
                             title: category.rawValue,
