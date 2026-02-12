@@ -8,9 +8,13 @@
 import Foundation
 
 class MilestoneManager: ObservableObject, CloudSyncObserver {
-    @Published var milestones: [Milestone] = []
+    @Published private(set) var milestones: [Milestone] = []
 
     let store = CloudSyncStore(storageKey: StorageKeys.milestones)
+    private var milestoneIndexByID: [UUID: Int] = [:]
+    private var sortedMilestonesCache: [Milestone] = []
+    private var milestonesByCategoryCache: [MilestoneCategory: [Milestone]] = [:]
+    private var milestoneCountByCategory: [MilestoneCategory: Int] = [:]
 
     init() {
         store.setupObservers(for: self)
@@ -30,7 +34,7 @@ class MilestoneManager: ObservableObject, CloudSyncObserver {
     }
 
     func updateMilestone(_ milestone: Milestone) {
-        if let index = milestones.firstIndex(where: { $0.id == milestone.id }) {
+        if let index = milestoneIndexByID[milestone.id] {
             milestones[index] = milestone
             saveMilestones()
         }
@@ -42,21 +46,47 @@ class MilestoneManager: ObservableObject, CloudSyncObserver {
     }
 
     var sortedMilestones: [Milestone] {
-        milestones.sorted { $0.date > $1.date }
+        sortedMilestonesCache
     }
 
     func milestonesByCategory(_ category: MilestoneCategory) -> [Milestone] {
-        milestones.filter { $0.category == category }.sorted { $0.date > $1.date }
+        milestonesByCategoryCache[category] ?? []
+    }
+
+    func milestoneCount(for category: MilestoneCategory) -> Int {
+        milestoneCountByCategory[category] ?? 0
+    }
+
+    var unlockedCategoryCount: Int {
+        milestoneCountByCategory.values.filter { $0 > 0 }.count
     }
 
     // MARK: - Persistence (via CloudSyncStore)
 
     private func saveMilestones() {
+        rebuildDerivedData()
         store.save(milestones)
     }
 
     private func loadMilestones() {
         milestones = store.load([Milestone].self) ?? []
+        rebuildDerivedData()
+    }
+
+    private func rebuildDerivedData() {
+        milestoneIndexByID = Dictionary(
+            uniqueKeysWithValues: milestones.enumerated().map { ($0.element.id, $0.offset) }
+        )
+        sortedMilestonesCache = milestones.sorted { $0.date > $1.date }
+
+        var grouped: [MilestoneCategory: [Milestone]] = [:]
+        var counts: [MilestoneCategory: Int] = [:]
+        for milestone in sortedMilestonesCache {
+            grouped[milestone.category, default: []].append(milestone)
+            counts[milestone.category, default: 0] += 1
+        }
+        milestonesByCategoryCache = grouped
+        milestoneCountByCategory = counts
     }
 
 }

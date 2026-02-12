@@ -10,6 +10,7 @@ import SwiftUI
 // MARK: - 饮食 Tab 主视图
 struct MealsTabView: View {
     @ObservedObject var mealRecordManager: MealRecordManager
+    @StateObject private var foodCatalogManager = FoodCatalogManager()
     @State private var showingAddSheet = false
     @State private var showingFoodList = false
     @State private var selectedFilter: MealType?
@@ -45,7 +46,7 @@ struct MealsTabView: View {
                         // 筛选栏
                         MealFilterBar(
                             selectedFilter: $selectedFilter,
-                            records: mealRecordManager.mealRecords
+                            mealRecordManager: mealRecordManager
                         )
 
                         // 记录列表
@@ -104,12 +105,15 @@ struct MealsTabView: View {
             .navigationBarTitleDisplayMode(.inline)
             .id(fontSizeFactor)
             .sheet(isPresented: $showingAddSheet) {
-                QuickAddMealSheet(mealRecordManager: mealRecordManager)
+                QuickAddMealSheet(
+                    mealRecordManager: mealRecordManager,
+                    foodCatalogManager: foodCatalogManager
+                )
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(AppRadius.xxl)
             }
             .sheet(isPresented: $showingFoodList) {
-                FoodListView(mealRecordManager: mealRecordManager)
+                FoodListView(foodCatalogManager: foodCatalogManager)
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(AppRadius.xxl)
             }
@@ -208,14 +212,14 @@ struct FoodListEntryButton: View {
 // MARK: - 筛选栏
 struct MealFilterBar: View {
     @Binding var selectedFilter: MealType?
-    let records: [MealRecord]
+    let mealRecordManager: MealRecordManager
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppSpacing.xs) {
                 FilterChip(
                     title: "全部",
-                    count: records.count,
+                    count: mealRecordManager.mealRecords.count,
                     isSelected: selectedFilter == nil,
                     color: AppColors.primary
                 ) {
@@ -223,7 +227,7 @@ struct MealFilterBar: View {
                 }
 
                 ForEach(MealType.allCases, id: \.self) { type in
-                    let count = records.filter { $0.mealType == type }.count
+                    let count = mealRecordManager.mealRecordsByType(type).count
                     FilterChip(
                         title: type.rawValue,
                         count: count,
@@ -331,16 +335,11 @@ struct MealRecordRow: View {
 // MARK: - 快捷添加饮食 Sheet
 struct QuickAddMealSheet: View {
     @ObservedObject var mealRecordManager: MealRecordManager
+    @ObservedObject var foodCatalogManager: FoodCatalogManager
     @Environment(\.dismiss) var dismiss
 
-    // Food list stored in AppStorage
-    @AppStorage("savedFoodList") private var savedFoodListData: Data = Data()
-    private var foodList: [String] {
-        (try? JSONDecoder().decode([String].self, from: savedFoodListData)) ?? []
-    }
-
     @State private var selectedType: MealType = .lunch
-    @State private var selectedFoods: [String] = []
+    @State private var selectedFoodIDs: Set<UUID> = []
     @State private var amount: String = ""
     @State private var notes: String = ""
     @State private var date = Date()
@@ -390,22 +389,22 @@ struct QuickAddMealSheet: View {
                             .font(AppTypography.calloutMedium)
                             .foregroundColor(AppColors.textSecondary)
 
-                        if foodList.isEmpty {
+                        if foodCatalogManager.activeItems.isEmpty {
                             Text("暂无食材，请先在食谱中添加")
                                 .font(AppTypography.footnote)
                                 .foregroundColor(AppColors.textTertiary)
                         } else {
                             FlowLayout(spacing: AppSpacing.xs) {
-                                ForEach(foodList, id: \.self) { food in
-                                    let isSelected = selectedFoods.contains(food)
+                                ForEach(foodCatalogManager.activeItems) { food in
+                                    let isSelected = selectedFoodIDs.contains(food.id)
                                     Button(action: {
                                         if isSelected {
-                                            selectedFoods.removeAll { $0 == food }
+                                            selectedFoodIDs.remove(food.id)
                                         } else {
-                                            selectedFoods.append(food)
+                                            selectedFoodIDs.insert(food.id)
                                         }
                                     }) {
-                                        Text(food)
+                                        Text(food.name)
                                             .font(AppTypography.footnoteMedium)
                                             .foregroundColor(isSelected ? .white : AppColors.textPrimary)
                                             .padding(.horizontal, AppSpacing.sm)
@@ -448,7 +447,7 @@ struct QuickAddMealSheet: View {
                         Text("保存")
                     }
                     .buttonStyle(PrimaryButtonStyle(color: AppColors.meal))
-                    .disabled(selectedFoods.isEmpty && amount.isEmpty)
+                    .disabled(selectedFoodIDs.isEmpty && amount.isEmpty)
                 }
                 .padding(AppSpacing.lg)
             }
@@ -466,6 +465,11 @@ struct QuickAddMealSheet: View {
     }
 
     private func save() {
+        let selectedFoods = foodCatalogManager.activeItems
+            .filter { selectedFoodIDs.contains($0.id) }
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map(\.name)
+
         let record = MealRecord(
             date: date,
             mealType: selectedType,
@@ -520,22 +524,12 @@ struct FlowLayout: Layout {
 
 // MARK: - 食物清单视图
 struct FoodListView: View {
-    @ObservedObject var mealRecordManager: MealRecordManager
+    @ObservedObject var foodCatalogManager: FoodCatalogManager
     @Environment(\.dismiss) var dismiss
     @State private var newFoodName = ""
-    @AppStorage("savedFoodList") private var savedFoodListData: Data = Data()
-    @AppStorage("foodListInitialized") private var foodListInitialized: Bool = false
-    
-    private static let defaultFoods = [
-        "米粥", "面条", "馒头", "面包", "燕麦",
-        "鸡蛋", "豆腐", "鸡肉", "鱼肉",
-        "香蕉", "苹果", "牛油果", "蓝莓",
-        "红薯", "胡萝卜", "西兰花", "南瓜", "土豆",
-        "母乳", "配方奶", "酸奶"
-    ]
-    
-    private var foodList: [String] {
-        (try? JSONDecoder().decode([String].self, from: savedFoodListData)) ?? []
+
+    private var canAddFood: Bool {
+        !newFoodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -556,16 +550,16 @@ struct FoodListView: View {
                         Button(action: addFood) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 28))
-                                .foregroundColor(newFoodName.isEmpty ? AppColors.textTertiary : AppColors.meal)
+                                .foregroundColor(canAddFood ? AppColors.meal : AppColors.textTertiary)
                         }
-                        .disabled(newFoodName.isEmpty)
+                        .disabled(!canAddFood)
                     }
                     .padding(AppSpacing.lg)
 
                     Divider()
                         .foregroundColor(AppColors.divider)
 
-                    if foodList.isEmpty {
+                    if foodCatalogManager.activeItems.isEmpty {
                         EmptyStateView(
                             icon: "carrot",
                             title: "暂无食材",
@@ -573,14 +567,17 @@ struct FoodListView: View {
                         )
                     } else {
                         List {
-                            ForEach(foodList, id: \.self) { food in
-                                Text(food)
+                            ForEach(foodCatalogManager.activeItems) { food in
+                                Text(food.name)
                                     .font(AppTypography.body)
                                     .foregroundColor(AppColors.textPrimary)
                                     .listRowBackground(AppColors.surface)
                             }
                             .onDelete { offsets in
-                                removeFoodItems(at: offsets)
+                                foodCatalogManager.removeFoods(at: offsets)
+                            }
+                            .onMove { source, destination in
+                                foodCatalogManager.moveFoods(from: source, to: destination)
                             }
                         }
                         .listStyle(.plain)
@@ -590,6 +587,10 @@ struct FoodListView: View {
             .navigationTitle("妈妈食谱")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    EditButton()
+                        .foregroundColor(AppColors.textSecondary)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("完成") { dismiss() }
                         .foregroundColor(AppColors.primary)
@@ -597,26 +598,11 @@ struct FoodListView: View {
                 }
             }
         }
-        .onAppear {
-            if !foodListInitialized && foodList.isEmpty {
-                savedFoodListData = (try? JSONEncoder().encode(Self.defaultFoods)) ?? Data()
-                foodListInitialized = true
-            }
-        }
     }
 
     private func addFood() {
-        let name = newFoodName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return }
-        var list = foodList
-        list.append(name)
-        savedFoodListData = (try? JSONEncoder().encode(list)) ?? Data()
+        guard canAddFood else { return }
+        foodCatalogManager.addFood(named: newFoodName)
         newFoodName = ""
-    }
-
-    private func removeFoodItems(at offsets: IndexSet) {
-        var list = foodList
-        list.remove(atOffsets: offsets)
-        savedFoodListData = (try? JSONEncoder().encode(list)) ?? Data()
     }
 }

@@ -38,18 +38,25 @@ enum StatsRange: String, CaseIterable {
             // 周一 ~ 周日
             let weekday = cal.component(.weekday, from: anchor)
             let daysToMonday = (weekday == 1) ? -6 : (2 - weekday)
-            let monday = cal.date(byAdding: .day, value: daysToMonday, to: cal.startOfDay(for: anchor))!
-            let nextMonday = cal.date(byAdding: .day, value: 7, to: monday)!
+            let startOfAnchor = cal.startOfDay(for: anchor)
+            let monday = cal.date(byAdding: .day, value: daysToMonday, to: startOfAnchor) ?? startOfAnchor
+            let nextMonday = cal.date(byAdding: .day, value: 7, to: monday)
+                ?? cal.date(byAdding: .day, value: 1, to: monday)
+                ?? monday
             return (monday, nextMonday)
         case .month:
             let comps = cal.dateComponents([.year, .month], from: anchor)
-            let start = cal.date(from: comps)!
-            let end = cal.date(byAdding: .month, value: 1, to: start)!
+            let start = cal.date(from: comps) ?? cal.startOfDay(for: anchor)
+            let end = cal.date(byAdding: .month, value: 1, to: start)
+                ?? cal.date(byAdding: .day, value: 30, to: start)
+                ?? start
             return (start, end)
         case .year:
             let comps = cal.dateComponents([.year], from: anchor)
-            let start = cal.date(from: comps)!
-            let end = cal.date(byAdding: .year, value: 1, to: start)!
+            let start = cal.date(from: comps) ?? cal.startOfDay(for: anchor)
+            let end = cal.date(byAdding: .year, value: 1, to: start)
+                ?? cal.date(byAdding: .day, value: 365, to: start)
+                ?? start
             return (start, end)
         }
     }
@@ -58,9 +65,12 @@ enum StatsRange: String, CaseIterable {
     func shift(_ anchor: Date, by delta: Int) -> Date {
         let cal = Calendar.current
         switch self {
-        case .week:  return cal.date(byAdding: .weekOfYear, value: delta, to: anchor)!
-        case .month: return cal.date(byAdding: .month, value: delta, to: anchor)!
-        case .year:  return cal.date(byAdding: .year, value: delta, to: anchor)!
+        case .week:
+            return cal.date(byAdding: .weekOfYear, value: delta, to: anchor) ?? anchor
+        case .month:
+            return cal.date(byAdding: .month, value: delta, to: anchor) ?? anchor
+        case .year:
+            return cal.date(byAdding: .year, value: delta, to: anchor) ?? anchor
         }
     }
 
@@ -70,7 +80,7 @@ enum StatsRange: String, CaseIterable {
         let cal = Calendar.current
         switch self {
         case .week:
-            let lastDay = cal.date(byAdding: .day, value: -1, to: end)!
+            let lastDay = cal.date(byAdding: .day, value: -1, to: end) ?? start
             let fmt = DateFormatter()
             fmt.locale = Locale(identifier: "zh_CN")
             fmt.dateFormat = "M月d日"
@@ -130,20 +140,20 @@ struct StatisticsTabView: View {
                             mode: selectedMode,
                             range: selectedRange,
                             anchorDate: anchorDate,
-                            sleepRecords: recordManager.completedRecords,
-                            mealRecords: mealRecordManager.mealRecords
+                            sleepManager: recordManager,
+                            mealManager: mealRecordManager
                         )
 
                         // 详细图表
                         if selectedMode == .sleep {
                             SleepStatsContent(
-                                records: recordManager.completedRecords,
+                                sleepManager: recordManager,
                                 range: selectedRange,
                                 anchorDate: anchorDate
                             )
                         } else {
                             MealStatsContent(
-                                records: mealRecordManager.mealRecords,
+                                mealManager: mealRecordManager,
                                 range: selectedRange,
                                 anchorDate: anchorDate
                             )
@@ -279,8 +289,8 @@ struct StatsOverviewRow: View {
     let mode: StatisticsTabView.StatsMode
     let range: StatsRange
     let anchorDate: Date
-    let sleepRecords: [SleepRecord]
-    let mealRecords: [MealRecord]
+    let sleepManager: SleepRecordManager
+    let mealManager: MealRecordManager
 
     private var dateRange: (start: Date, end: Date) {
         range.dateRange(for: anchorDate)
@@ -300,22 +310,21 @@ struct StatsOverviewRow: View {
         }
     }
 
-    private var rangeRecords: [SleepRecord] {
+    private var sleepSummary: (duration: TimeInterval, count: Int) {
         let (start, end) = dateRange
-        return sleepRecords.filter { ($0.wakeTime ?? $0.sleepTime) >= start && ($0.wakeTime ?? $0.sleepTime) < end }
+        return sleepManager.sleepRangeSummary(start: start, end: end)
     }
 
-    private var rangeMealRecords: [MealRecord] {
+    private var mealSummary: (totalCount: Int, typeCounts: [MealType: Int]) {
         let (start, end) = dateRange
-        return mealRecords.filter { $0.date >= start && $0.date < end }
+        return mealManager.mealRangeSummary(start: start, end: end)
     }
 
     private var days: Int { range.daysCount(for: anchorDate) }
 
     private var averageSleepDuration: String {
-        let recs = rangeRecords
-        guard !recs.isEmpty else { return "0时" }
-        let total = recs.compactMap(\.duration).reduce(0, +)
+        guard sleepSummary.count > 0 else { return "0时" }
+        let total = sleepSummary.duration
         let avg = total / Double(days)
         let hours = Int(avg) / 3600
         let minutes = (Int(avg) % 3600) / 60
@@ -323,27 +332,24 @@ struct StatsOverviewRow: View {
     }
 
     private var totalSleepHours: String {
-        let total = rangeRecords.compactMap(\.duration).reduce(0, +)
+        let total = sleepSummary.duration
         return "\(Int(total) / 3600)时"
     }
 
     private var averageSleepCount: String {
-        String(format: "%.1f", Double(rangeRecords.count) / Double(days))
+        String(format: "%.1f", Double(sleepSummary.count) / Double(days))
     }
 
-    private var totalMealCount: Int { rangeMealRecords.count }
+    private var totalMealCount: Int { mealSummary.totalCount }
 
     private var averageDailyMeals: Double {
-        Double(rangeMealRecords.count) / Double(days)
+        Double(mealSummary.totalCount) / Double(days)
     }
 
     private var topMealType: String {
-        let filtered = rangeMealRecords
-        guard !filtered.isEmpty else { return "无" }
-        let counts = MealType.allCases.map { type in
-            (type: type, count: filtered.filter { $0.mealType == type }.count)
-        }
-        return counts.max(by: { $0.count < $1.count })?.type.rawValue ?? "无"
+        guard !mealSummary.typeCounts.isEmpty else { return "无" }
+        let maxType = mealSummary.typeCounts.max(by: { $0.value < $1.value })?.key
+        return maxType?.rawValue ?? "无"
     }
 }
 
@@ -441,7 +447,7 @@ struct TrendChart: View {
 
 // MARK: - 睡眠统计
 struct SleepStatsContent: View {
-    let records: [SleepRecord]
+    let sleepManager: SleepRecordManager
     let range: StatsRange
     let anchorDate: Date
 
@@ -452,28 +458,22 @@ struct SleepStatsContent: View {
         if range == .year {
             // 按月汇总 — 12 个月
             return (0..<12).map { i in
-                let monthDate = cal.date(byAdding: .month, value: i, to: start)!
-                let monthRecords = records.filter { record in
-                    guard let wakeTime = record.wakeTime else { return false }
-                    return cal.isDate(wakeTime, equalTo: monthDate, toGranularity: .month)
-                }
-                let avgHours: Double
-                if monthRecords.isEmpty {
-                    avgHours = 0
-                } else {
-                    avgHours = monthRecords.compactMap(\.duration).reduce(0, +) / Double(monthRecords.count) / 3600
-                }
+                let monthDate = cal.date(byAdding: .month, value: i, to: start) ?? start
+                let monthEnd = cal.date(byAdding: .month, value: 1, to: monthDate)
+                    ?? cal.date(byAdding: .day, value: 30, to: monthDate)
+                    ?? monthDate
+                let summary = sleepManager.sleepRangeSummary(start: monthDate, end: monthEnd)
+                let avgHours = summary.count > 0
+                    ? summary.duration / Double(summary.count) / 3600
+                    : 0
                 return (date: monthDate, value: avgHours)
             }
         } else {
             let days = cal.dateComponents([.day], from: start, to: end).day ?? 1
             return (0..<days).map { i in
-                let date = cal.date(byAdding: .day, value: i, to: start)!
-                let dayRecords = records.filter { record in
-                    guard let wakeTime = record.wakeTime else { return false }
-                    return cal.isDate(wakeTime, inSameDayAs: date)
-                }
-                let totalHours = dayRecords.compactMap(\.duration).reduce(0, +) / 3600
+                let date = cal.date(byAdding: .day, value: i, to: start) ?? start
+                let summary = sleepManager.sleepDaySummary(for: date)
+                let totalHours = summary.duration / 3600
                 return (date: date, value: totalHours)
             }
         }
@@ -506,7 +506,7 @@ struct SleepStatsContent: View {
 
 // MARK: - 饮食统计
 struct MealStatsContent: View {
-    let records: [MealRecord]
+    let mealManager: MealRecordManager
     let range: StatsRange
     let anchorDate: Date
     
@@ -520,28 +520,29 @@ struct MealStatsContent: View {
 
         if range == .year {
             return (0..<12).map { i in
-                let monthDate = cal.date(byAdding: .month, value: i, to: start)!
-                let monthRecords = records.filter { record in
-                    cal.isDate(record.date, equalTo: monthDate, toGranularity: .month)
-                }
+                let monthDate = cal.date(byAdding: .month, value: i, to: start) ?? start
                 let daysInMonth = cal.range(of: .day, in: .month, for: monthDate)?.count ?? 30
-                return (date: monthDate, value: Double(monthRecords.count) / Double(daysInMonth))
+                let monthEnd = cal.date(byAdding: .month, value: 1, to: monthDate)
+                    ?? cal.date(byAdding: .day, value: daysInMonth, to: monthDate)
+                    ?? monthDate
+                let summary = mealManager.mealRangeSummary(start: monthDate, end: monthEnd)
+                return (date: monthDate, value: Double(summary.totalCount) / Double(daysInMonth))
             }
         } else {
             let days = cal.dateComponents([.day], from: start, to: end).day ?? 1
             return (0..<days).map { i in
-                let date = cal.date(byAdding: .day, value: i, to: start)!
-                let count = records.filter { cal.isDate($0.date, inSameDayAs: date) }.count
-                return (date: date, value: Double(count))
+                let date = cal.date(byAdding: .day, value: i, to: start) ?? start
+                let summary = mealManager.mealDaySummary(for: date)
+                return (date: date, value: Double(summary.totalCount))
             }
         }
     }
 
     private var typeDistribution: [(type: String, count: Int)] {
         let (start, end) = dateRange
-        let filtered = records.filter { $0.date >= start && $0.date < end }
+        let summary = mealManager.mealRangeSummary(start: start, end: end)
         return MealType.allCases.map { type in
-            (type: type.rawValue, count: filtered.filter { $0.mealType == type }.count)
+            (type: type.rawValue, count: summary.typeCounts[type] ?? 0)
         }.filter { $0.count > 0 }
     }
 

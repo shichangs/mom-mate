@@ -8,9 +8,20 @@
 import Foundation
 
 class SleepRecordManager: ObservableObject, CloudSyncObserver {
-    @Published var records: [SleepRecord] = []
+    @Published private(set) var records: [SleepRecord] = []
 
     let store = CloudSyncStore(storageKey: StorageKeys.sleepRecords)
+    private let calendar = Calendar.current
+
+    private struct DaySummary {
+        var totalDuration: TimeInterval = 0
+        var count: Int = 0
+    }
+
+    private var recordIndexByID: [UUID: Int] = [:]
+    private var completedRecordsCache: [SleepRecord] = []
+    private var currentSleepRecordCache: SleepRecord?
+    private var wakeDaySummaries: [Date: DaySummary] = [:]
 
     init() {
         store.setupObservers(for: self)
@@ -46,24 +57,24 @@ class SleepRecordManager: ObservableObject, CloudSyncObserver {
     }
 
     func endSleep(for record: SleepRecord) {
-        if let index = records.firstIndex(where: { $0.id == record.id }) {
-            let updatedRecord = SleepRecord(sleepTime: record.sleepTime, wakeTime: Date())
+        if let index = recordIndexByID[record.id] {
+            let updatedRecord = SleepRecord(id: record.id, sleepTime: record.sleepTime, wakeTime: Date())
             records[index] = updatedRecord
             saveRecords()
         }
     }
 
     func endCurrentSleep() {
-        if let currentRecord = records.first, currentRecord.isSleeping {
+        if let currentRecord = currentSleepRecord {
             endSleep(for: currentRecord)
         }
     }
 
     func endCurrentSleep(minutesAgo: Int) {
-        if let currentRecord = records.first, currentRecord.isSleeping {
+        if let currentRecord = currentSleepRecord {
             let wakeTime = Calendar.current.date(byAdding: .minute, value: -minutesAgo, to: Date()) ?? Date()
             guard wakeTime > currentRecord.sleepTime else { return }
-            if let index = records.firstIndex(where: { $0.id == currentRecord.id }) {
+            if let index = recordIndexByID[currentRecord.id] {
                 let updatedRecord = SleepRecord(id: currentRecord.id, sleepTime: currentRecord.sleepTime, wakeTime: wakeTime)
                 records[index] = updatedRecord
                 saveRecords()
@@ -77,7 +88,7 @@ class SleepRecordManager: ObservableObject, CloudSyncObserver {
     }
 
     func updateRecord(_ record: SleepRecord, sleepTime: Date, wakeTime: Date?) {
-        if let index = records.firstIndex(where: { $0.id == record.id }) {
+        if let index = recordIndexByID[record.id] {
             let recordWithSameId = SleepRecord(id: record.id, sleepTime: sleepTime, wakeTime: wakeTime)
             records[index] = recordWithSameId
             saveRecords()
@@ -85,30 +96,79 @@ class SleepRecordManager: ObservableObject, CloudSyncObserver {
     }
 
     func updateRecord(_ record: SleepRecord) {
-        if let index = records.firstIndex(where: { $0.id == record.id }) {
+        if let index = recordIndexByID[record.id] {
             records[index] = record
             saveRecords()
         }
     }
 
     var currentSleepRecord: SleepRecord? {
-        return records.first { $0.isSleeping }
+        currentSleepRecordCache
     }
 
     var completedRecords: [SleepRecord] {
-        return records.filter { !$0.isSleeping }
+        completedRecordsCache
+    }
+
+    func sleepDaySummary(for day: Date) -> (duration: TimeInterval, count: Int) {
+        let key = calendar.startOfDay(for: day)
+        let summary = wakeDaySummaries[key] ?? DaySummary()
+        return (summary.totalDuration, summary.count)
+    }
+
+    func sleepRangeSummary(start: Date, end: Date) -> (duration: TimeInterval, count: Int) {
+        let startDay = calendar.startOfDay(for: start)
+        let endDay = calendar.startOfDay(for: end)
+        guard startDay < endDay else { return (0, 0) }
+
+        var cursor = startDay
+        var totalDuration: TimeInterval = 0
+        var totalCount = 0
+
+        while cursor < endDay {
+            if let summary = wakeDaySummaries[cursor] {
+                totalDuration += summary.totalDuration
+                totalCount += summary.count
+            }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+
+        return (totalDuration, totalCount)
     }
 
     // MARK: - Persistence (via CloudSyncStore)
 
     private func saveRecords() {
+        rebuildDerivedData()
         store.save(records)
         SleepStatisticsManager.shared.invalidateCache()
     }
 
     private func loadRecords() {
         records = store.load([SleepRecord].self) ?? []
+        rebuildDerivedData()
         SleepStatisticsManager.shared.invalidateCache()
+    }
+
+    private func rebuildDerivedData() {
+        recordIndexByID = Dictionary(
+            uniqueKeysWithValues: records.enumerated().map { ($0.element.id, $0.offset) }
+        )
+        currentSleepRecordCache = records.first(where: { $0.isSleeping })
+        completedRecordsCache = records.filter { !$0.isSleeping }
+
+        var summaries: [Date: DaySummary] = [:]
+        for record in completedRecordsCache {
+            guard let wakeTime = record.wakeTime,
+                  let duration = record.duration else { continue }
+            let key = calendar.startOfDay(for: wakeTime)
+            var summary = summaries[key] ?? DaySummary()
+            summary.totalDuration += duration
+            summary.count += 1
+            summaries[key] = summary
+        }
+        wakeDaySummaries = summaries
     }
 
     // MARK: - Test data generation

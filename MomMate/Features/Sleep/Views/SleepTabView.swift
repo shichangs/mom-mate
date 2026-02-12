@@ -21,39 +21,17 @@ struct SleepTabView: View {
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     private var todaySleepDuration: TimeInterval {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
-        return recordManager.completedRecords
-            .filter { record in
-                guard let wakeTime = record.wakeTime else { return false }
-                return wakeTime >= today && wakeTime < tomorrow
-            }
-            .compactMap(\.duration)
-            .reduce(0, +)
+        recordManager.sleepDaySummary(for: Date()).duration
     }
 
     private var yesterdaySleepDuration: TimeInterval {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
-        return recordManager.completedRecords
-            .filter { record in
-                guard let wakeTime = record.wakeTime else { return false }
-                return wakeTime >= yesterday && wakeTime < today
-            }
-            .compactMap(\.duration)
-            .reduce(0, +)
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+        return recordManager.sleepDaySummary(for: yesterday).duration
     }
 
     private var todaySleepCount: Int {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
-        return recordManager.completedRecords.filter { record in
-            guard let wakeTime = record.wakeTime else { return false }
-            return wakeTime >= today && wakeTime < tomorrow
-        }.count
+        recordManager.sleepDaySummary(for: Date()).count
     }
 
     var body: some View {
