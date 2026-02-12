@@ -2,85 +2,83 @@
 //  DesignSystem.swift
 //  MomMate
 //
-//  Minimal compact design system
+//  Modern minimalist design system — 现代极简
 //
 
 import SwiftUI
 import Foundation
 
-// MARK: - Semantic Colors (情绪化色彩)
+// MARK: - Semantic Colors (现代极简色彩)
 struct AppColors {
-    // Primary palette
-    static let primary = Color(hex: "4F6FAF")
-    static let secondary = Color(hex: "8EA0BF")
-    static let accent = Color(hex: "5D8C73")
-    static let warning = Color(hex: "C79A58")
+    // Primary palette — 低饱和度、克制
+    static let primary = Color(hex: "2C3E50")       // 深墨蓝
+    static let secondary = Color(hex: "94A3B8")     // 冷灰蓝
+    static let accent = Color(hex: "3D8B6E")        // 鼠尾草绿
+    static let warning = Color(hex: "D4956A")       // 柔和琥珀
     
-    // Semantic/Emotional colors (情绪色)
-    static let sleep = Color(hex: "5F6FB0")
-    static let awake = Color(hex: "C9825A")
-    static let meal = Color(hex: "4F8A72")
-    static let milestone = Color(hex: "B56A79")
-    static let notes = Color(hex: "5D8AA8")
+    // Semantic/Emotional colors (情绪色 — 低饱和)
+    static let sleep = Color(hex: "5B6C9F")         // 静谧蓝紫
+    static let awake = Color(hex: "C4855C")         // 柔暖橘
+    static let meal = Color(hex: "3D8B6E")          // 鼠尾草绿
+    static let milestone = Color(hex: "A85C6E")     // 柔玫红
+    static let notes = Color(hex: "5A8296")         // 雾蓝
     
-    // Backgrounds
-    static let background = Color(hex: "F4F6F8")
+    // Backgrounds — 近纯白
+    static let background = Color(hex: "FAFBFC")
     static let surface = Color.white
-    static let surfaceSecondary = Color(hex: "EEF1F4")
-    static let surfaceElevated = Color(hex: "FFFFFF")
+    static let surfaceSecondary = Color(hex: "F5F6F8")
+    static let surfaceElevated = Color.white
     
     // Dark mode surfaces
     static let darkBackground = Color(hex: "0F172A")
     static let darkSurface = Color(hex: "1E293B")
     
-    // Text
-    static let textPrimary = Color(hex: "1F2937")
-    static let textSecondary = Color(hex: "5F6B7A")
-    static let textTertiary = Color(hex: "97A1AE")
+    // Text — 三级灰度
+    static let textPrimary = Color(hex: "1A1A2E")
+    static let textSecondary = Color(hex: "6B7280")
+    static let textTertiary = Color(hex: "B0B8C1")
     
-// MARK: - Gradients
+    // Borders & Dividers — 极淡
+    static let border = Color(hex: "E8EAED")
+    static let divider = Color(hex: "F0F1F3")
+
+    // Subtle tinted backgrounds for summary cards
+    static let sleepTint = Color(hex: "5B6C9F").opacity(0.06)
+    static let mealTint = Color(hex: "3D8B6E").opacity(0.06)
+    static let milestoneTint = Color(hex: "A85C6E").opacity(0.06)
+    
+    // Soft dual-tone gradients
     static let sleepGradient = LinearGradient(
-        colors: [Color(hex: "5F6FB0"), Color(hex: "6676B6")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+        colors: [Color(hex: "5B6C9F"), Color(hex: "7B8FBF")],
+        startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    
     static let awakeGradient = LinearGradient(
-        colors: [Color(hex: "C9825A"), Color(hex: "CF8C67")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+        colors: [Color(hex: "C4855C"), Color(hex: "D9A87C")],
+        startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    
     static let mealGradient = LinearGradient(
-        colors: [Color(hex: "4F8A72"), Color(hex: "5B927B")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+        colors: [Color(hex: "3D8B6E"), Color(hex: "5AAE8E")],
+        startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    
     static let milestoneGradient = LinearGradient(
-        colors: [Color(hex: "B56A79"), Color(hex: "BE7584")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+        colors: [Color(hex: "A85C6E"), Color(hex: "C47D8E")],
+        startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    
     static let heroGradient = LinearGradient(
-        colors: [Color(hex: "4F6FAF"), Color(hex: "5877B4")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+        colors: [Color(hex: "2C3E50"), Color(hex: "3E5871")],
+        startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    
     static let backgroundGradient = LinearGradient(
-        colors: [Color(hex: "F4F6F8"), Color(hex: "F4F6F8")],
-        startPoint: .top,
-        endPoint: .bottom
+        colors: [Color(hex: "FAFBFC"), Color(hex: "F0F2F5")],
+        startPoint: .top, endPoint: .bottom
     )
     
     // Mesh gradient colors for iOS 17+
     static let meshColors: [Color] = [
-        Color(hex: "6B7FB0"),
-        Color(hex: "7E8EB8"),
-        Color(hex: "9A8FB3"),
-        Color(hex: "B79A7D")
+        Color(hex: "5B6C9F"),
+        Color(hex: "94A3B8"),
+        Color(hex: "A85C6E"),
+        Color(hex: "D4956A")
     ]
 }
 
@@ -176,7 +174,7 @@ extension Color {
     }
 }
 
-// MARK: - Typography (动态字体)
+// MARK: - Typography (现代极简排版)
 struct AppTypography {
     // 字体缩放比例 (默认 1.0)
     static var fontScale: CGFloat {
@@ -188,14 +186,14 @@ struct AppTypography {
         return Font.system(size: size * fontScale, weight: weight, design: design)
     }
 
-    // Large Title - Extra bold for hero sections
-    static var largeTitle: Font { scaledFont(size: 30, weight: .bold, design: .rounded) }
+    // Large Title — 锐利
+    static var largeTitle: Font { scaledFont(size: 30, weight: .bold) }
     static var largeTitleSerif: Font { scaledFont(size: 30, weight: .bold, design: .serif) }
     
     // Titles
-    static var title1: Font { scaledFont(size: 24, weight: .bold, design: .rounded) }
-    static var title2: Font { scaledFont(size: 20, weight: .semibold, design: .rounded) }
-    static var title3: Font { scaledFont(size: 18, weight: .semibold, design: .rounded) }
+    static var title1: Font { scaledFont(size: 24, weight: .bold) }
+    static var title2: Font { scaledFont(size: 20, weight: .semibold) }
+    static var title3: Font { scaledFont(size: 18, weight: .semibold) }
     
     // Body
     static var body: Font { scaledFont(size: 15, weight: .regular) }
@@ -218,81 +216,81 @@ struct AppTypography {
     static var caption: Font { scaledFont(size: 11, weight: .regular) }
     static var captionMedium: Font { scaledFont(size: 11, weight: .medium) }
     
-    // Display (for large numbers) - More dramatic
-    static var display: Font { scaledFont(size: 48, weight: .bold, design: .rounded) }
-    static var displayMedium: Font { scaledFont(size: 36, weight: .bold, design: .rounded) }
-    static var displaySmall: Font { scaledFont(size: 28, weight: .bold, design: .rounded) }
+    // Display (for large numbers) — 纤细高级感
+    static var display: Font { scaledFont(size: 48, weight: .light) }
+    static var displayMedium: Font { scaledFont(size: 36, weight: .light) }
+    static var displaySmall: Font { scaledFont(size: 28, weight: .regular) }
     
-    // Monospace for timers
-    static var timer: Font { scaledFont(size: 42, weight: .bold, design: .monospaced) }
-    static var timerSmall: Font { scaledFont(size: 28, weight: .semibold, design: .monospaced) }
+    // Monospace for timers — 纤细等宽
+    static var timer: Font { scaledFont(size: 42, weight: .light, design: .monospaced) }
+    static var timerSmall: Font { scaledFont(size: 28, weight: .regular, design: .monospaced) }
 }
 
-// MARK: - Spacing
+// MARK: - Spacing (加大留白)
 struct AppSpacing {
     static let xxs: CGFloat = 4
     static let xs: CGFloat = 8
-    static let sm: CGFloat = 10
-    static let md: CGFloat = 12
-    static let lg: CGFloat = 16
-    static let xl: CGFloat = 20
-    static let xxl: CGFloat = 24
-    static let xxxl: CGFloat = 32
-    static let huge: CGFloat = 44
+    static let sm: CGFloat = 12
+    static let md: CGFloat = 16
+    static let lg: CGFloat = 20
+    static let xl: CGFloat = 28
+    static let xxl: CGFloat = 36
+    static let xxxl: CGFloat = 48
+    static let huge: CGFloat = 64
 }
 
 // MARK: - Corner Radius
 struct AppRadius {
-    static let xs: CGFloat = 5
+    static let xs: CGFloat = 4
     static let sm: CGFloat = 8
-    static let md: CGFloat = 10
-    static let lg: CGFloat = 12
-    static let xl: CGFloat = 16
-    static let xxl: CGFloat = 20
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 14
+    static let xl: CGFloat = 18
+    static let xxl: CGFloat = 24
     static let full: CGFloat = 9999
 }
 
-// MARK: - Layered Shadows
+// MARK: - Layered Shadows (极简化)
 struct AppShadow {
-    // Subtle elevation
+    // 几乎不可见
     static let small = (
-        color: Color.black.opacity(0.01),
-        radius: CGFloat(1),
-        x: CGFloat(0),
-        y: CGFloat(0)
-    )
-    
-    // Cards and surfaces
-    static let medium = (
-        color: Color.black.opacity(0.012),
+        color: Color.black.opacity(0.03),
         radius: CGFloat(2),
         x: CGFloat(0),
         y: CGFloat(1)
     )
     
-    // Floating elements
-    static let large = (
-        color: Color.black.opacity(0.015),
-        radius: CGFloat(3),
+    // 微弱感知
+    static let medium = (
+        color: Color.black.opacity(0.04),
+        radius: CGFloat(4),
         x: CGFloat(0),
-        y: CGFloat(1)
+        y: CGFloat(2)
+    )
+    
+    // 浮动元素
+    static let large = (
+        color: Color.black.opacity(0.06),
+        radius: CGFloat(8),
+        x: CGFloat(0),
+        y: CGFloat(4)
     )
     
     // Dramatic depth
     static let xlarge = (
-        color: Color.black.opacity(0.02),
-        radius: CGFloat(4),
+        color: Color.black.opacity(0.08),
+        radius: CGFloat(16),
         x: CGFloat(0),
-        y: CGFloat(1)
+        y: CGFloat(8)
     )
     
     // Colored shadow (for buttons)
     static func colored(_ color: Color) -> (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        return (color: color.opacity(0.06), radius: 2, x: 0, y: 1)
+        return (color: color.opacity(0.12), radius: 8, x: 0, y: 4)
     }
 }
 
-// MARK: - Animation Presets (动画预设)
+// MARK: - Animation Presets
 struct AppAnimation {
     static let springBouncy = Animation.spring(response: 0.4, dampingFraction: 0.6, blendDuration: 0)
     static let springSmooth = Animation.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0)
@@ -303,7 +301,7 @@ struct AppAnimation {
 
 // MARK: - View Modifiers
 
-// Minimal Card
+// Minimal Card — 纯白底 + 超淡边框 + 微圆角
 struct GlassCardStyle: ViewModifier {
     var padding: CGFloat = AppSpacing.lg
     var cornerRadius: CGFloat = AppRadius.xl
@@ -312,18 +310,17 @@ struct GlassCardStyle: ViewModifier {
         content
             .padding(padding)
             .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(AppColors.surface)
-                    
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(Color(hex: "E5E7EB"), lineWidth: 1)
-                }
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(AppColors.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .stroke(AppColors.border.opacity(0.5), lineWidth: 0.5)
+                    )
             )
     }
 }
 
-// Elevated Card with subtle elevation
+// Elevated Card — 带极淡阴影
 struct ElevatedCardStyle: ViewModifier {
     var padding: CGFloat = AppSpacing.lg
     var cornerRadius: CGFloat = AppRadius.xl
@@ -334,10 +331,12 @@ struct ElevatedCardStyle: ViewModifier {
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(AppColors.surface)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+                    .shadow(
+                        color: AppShadow.small.color,
+                        radius: AppShadow.small.radius,
+                        x: AppShadow.small.x,
+                        y: AppShadow.small.y
+                    )
             )
     }
 }
@@ -353,33 +352,36 @@ struct CardStyle: ViewModifier {
                 RoundedRectangle(cornerRadius: AppRadius.xl)
                     .fill(AppColors.surface)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: AppRadius.xl)
-                    .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
-            )
     }
 }
 
-// Floating Action Button Style (悬浮按钮)
+// Floating Action Button Style — 带色阴影 + 弹性位移
 struct FloatingButtonStyle: ButtonStyle {
     var color: Color = AppColors.primary
-    var size: CGFloat = 50
+    var size: CGFloat = 52
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 18, weight: .semibold))
+            .font(.system(size: 20, weight: .medium))
             .foregroundColor(.white)
             .frame(width: size, height: size)
             .background(
                 Circle()
                     .fill(color)
+                    .shadow(
+                        color: color.opacity(configuration.isPressed ? 0.15 : 0.3),
+                        radius: configuration.isPressed ? 4 : 12,
+                        x: 0,
+                        y: configuration.isPressed ? 2 : 6
+                    )
             )
-            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.90 : 1.0)
+            .offset(y: configuration.isPressed ? 2 : 0)
             .animation(AppAnimation.springBouncy, value: configuration.isPressed)
     }
 }
 
-// Primary button with gradient
+// Primary button — 胶囊形，纯色底
 struct GradientButtonStyle: ButtonStyle {
     var gradient: LinearGradient = AppColors.heroGradient
     
@@ -390,16 +392,16 @@ struct GradientButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppSpacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: AppRadius.lg)
-                    .fill(gradient)
+                Capsule()
+                    .fill(AppColors.primary)
             )
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
             .animation(AppAnimation.springSnappy, value: configuration.isPressed)
     }
 }
 
-// Primary button style (保持兼容)
+// Primary button style — 胶囊形
 struct PrimaryButtonStyle: ButtonStyle {
     var color: Color = AppColors.primary
     
@@ -408,13 +410,13 @@ struct PrimaryButtonStyle: ButtonStyle {
             .font(AppTypography.bodySemibold)
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, AppSpacing.md)
+            .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: AppRadius.lg)
+                Capsule()
                     .fill(color)
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
             .animation(AppAnimation.springSnappy, value: configuration.isPressed)
     }
 }
@@ -430,12 +432,8 @@ struct SecondaryButtonStyle: ButtonStyle {
             .padding(.horizontal, AppSpacing.md)
             .padding(.vertical, AppSpacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: AppRadius.md)
+                Capsule()
                     .fill(color.opacity(0.08))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: AppRadius.md)
-                    .stroke(color.opacity(0.2), lineWidth: 1)
             )
             .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
             .animation(AppAnimation.springSnappy, value: configuration.isPressed)
@@ -455,7 +453,7 @@ struct ChipStyle: ViewModifier {
             .padding(.vertical, AppSpacing.xs)
             .background(
                 Capsule()
-                    .fill(isSelected ? color : color.opacity(0.12))
+                    .fill(isSelected ? color : color.opacity(0.08))
             )
     }
 }
@@ -481,11 +479,11 @@ extension View {
 
 // MARK: - Reusable Components
 
-// Icon circle background with gradient option
+// Icon circle background
 struct IconCircle: View {
     let icon: String
-    var size: CGFloat = 48
-    var iconSize: CGFloat = 22
+    var size: CGFloat = 44
+    var iconSize: CGFloat = 20
     var color: Color = AppColors.primary
     var filled: Bool = false
     var gradient: LinearGradient? = nil
@@ -493,11 +491,11 @@ struct IconCircle: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(filled || gradient != nil ? color : color.opacity(0.12))
+                .fill(filled || gradient != nil ? color : color.opacity(0.08))
                 .frame(width: size, height: size)
             
             Image(systemName: icon)
-                .font(.system(size: iconSize, weight: .semibold))
+                .font(.system(size: iconSize, weight: .medium))
                 .foregroundColor(filled || gradient != nil ? .white : color)
         }
     }
@@ -512,14 +510,15 @@ struct SectionHeader: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(AppTypography.title3)
-                .foregroundColor(AppColors.textPrimary)
+                .font(AppTypography.calloutMedium)
+                .foregroundColor(AppColors.textSecondary)
+                .textCase(.none)
             
             Spacer()
             
             if showChevron {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(AppColors.textTertiary)
             }
         }
@@ -538,10 +537,10 @@ struct EmptyStateView: View {
     var color: Color = AppColors.textSecondary
     
     var body: some View {
-        VStack(spacing: AppSpacing.sm) {
+        VStack(spacing: AppSpacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 48, weight: .light))
-                .foregroundColor(color.opacity(0.8))
+                .font(.system(size: 44, weight: .ultraLight))
+                .foregroundColor(color.opacity(0.5))
             
             Text(title)
                 .font(AppTypography.title3)
@@ -557,18 +556,18 @@ struct EmptyStateView: View {
     }
 }
 
-// Animated pulsing circle (for sleeping indicator)
+// Pulsing circle (sleeping indicator)
 struct PulsingCircle: View {
     let color: Color
     @State private var isPulsing = false
     
     var body: some View {
         Circle()
-            .fill(color.opacity(0.3))
+            .fill(color.opacity(0.2))
             .scaleEffect(isPulsing ? 1.3 : 1.0)
-            .opacity(isPulsing ? 0 : 0.6)
+            .opacity(isPulsing ? 0 : 0.4)
             .animation(
-                .easeInOut(duration: 1.5)
+                .easeInOut(duration: 2.0)
                 .repeatForever(autoreverses: false),
                 value: isPulsing
             )
@@ -578,33 +577,39 @@ struct PulsingCircle: View {
     }
 }
 
-// Breathing animation circle (优化的呼吸动画)
+// Breathing animation circle — 三层涟漪
 struct BreathingCircle: View {
     let color: Color
-    var size: CGFloat = 160
+    var size: CGFloat = 140
     @State private var isAnimating = false
     
     var body: some View {
         ZStack {
-            // Outer pulse
+            // Outermost pulse — delayed
             Circle()
-                .fill(color.opacity(0.15))
-                .frame(width: size * 1.28, height: size * 1.28)
-                .scaleEffect(isAnimating ? 1.08 : 0.94)
+                .fill(color.opacity(0.04))
+                .frame(width: size * 1.5, height: size * 1.5)
+                .scaleEffect(isAnimating ? 1.08 : 0.92)
+                .animation(
+                    .easeInOut(duration: 3.5)
+                    .repeatForever(autoreverses: true)
+                    .delay(0.5),
+                    value: isAnimating
+                )
             
             // Middle pulse
             Circle()
-                .fill(color.opacity(0.25))
-                .frame(width: size * 1.14, height: size * 1.14)
-                .scaleEffect(isAnimating ? 1.03 : 0.97)
+                .fill(color.opacity(0.06))
+                .frame(width: size * 1.3, height: size * 1.3)
+                .scaleEffect(isAnimating ? 1.06 : 0.96)
             
-            // Inner circle with gradient
+            // Inner circle
             Circle()
-                .fill(color)
+                .fill(color.opacity(0.12))
                 .frame(width: size, height: size)
         }
         .animation(
-            .easeInOut(duration: 2.5)
+            .easeInOut(duration: 3.0)
             .repeatForever(autoreverses: true),
             value: isAnimating
         )
@@ -614,7 +619,7 @@ struct BreathingCircle: View {
     }
 }
 
-// Stats Card with gradient accent
+// Stats Card
 struct StatsCard: View {
     let title: String
     let value: String
@@ -625,18 +630,14 @@ struct StatsCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            HStack {
-                IconCircle(
-                    icon: icon,
-                    size: 40,
-                    iconSize: 18,
-                    color: accentColor,
-                    filled: true,
-                    gradient: gradient
-                )
-                
-                Spacer()
-            }
+            IconCircle(
+                icon: icon,
+                size: 36,
+                iconSize: 16,
+                color: accentColor,
+                filled: true,
+                gradient: gradient
+            )
             
             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                 Text(value)
@@ -654,15 +655,15 @@ struct StatsCard: View {
                 }
             }
         }
-        .elevatedCard()
+        .glassCard()
     }
 }
 
-// Progress ring with animation
+// Progress ring
 struct ProgressRing: View {
     var progress: Double
     var color: Color = AppColors.primary
-    var lineWidth: CGFloat = 8
+    var lineWidth: CGFloat = 6
     var size: CGFloat = 100
     
     @State private var animatedProgress: Double = 0
@@ -671,16 +672,13 @@ struct ProgressRing: View {
         ZStack {
             // Background ring
             Circle()
-                .stroke(color.opacity(0.15), lineWidth: lineWidth)
+                .stroke(color.opacity(0.08), lineWidth: lineWidth)
             
             // Progress ring
             Circle()
                 .trim(from: 0, to: animatedProgress)
                 .stroke(
-                    AngularGradient(
-                        colors: [color, color.opacity(0.5), color],
-                        center: .center
-                    ),
+                    color,
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -696,5 +694,130 @@ struct ProgressRing: View {
                 animatedProgress = newValue
             }
         }
+    }
+}
+
+// MARK: - Animated Counter (数字弹跳)
+struct AnimatedCounter: View {
+    let value: Int
+    let font: Font
+    let color: Color
+    
+    @State private var displayValue: Int = 0
+    
+    var body: some View {
+        Text("\(displayValue)")
+            .font(font)
+            .foregroundColor(color)
+            .contentTransition(.numericText())
+            .onAppear { 
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    displayValue = value
+                }
+            }
+            .onChange(of: value) { _, newValue in
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    displayValue = newValue
+                }
+            }
+    }
+}
+
+// MARK: - Haptic Feedback
+enum HapticManager {
+    static func light() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+    static func medium() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+    static func success() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+    static func selection() {
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+}
+
+// MARK: - Swipe to Delete 行包装
+struct SwipeDeleteRow<Content: View>: View {
+    let onDelete: () -> Void
+    let content: Content
+    
+    @State private var offset: CGFloat = 0
+    @State private var isSwiped = false
+    
+    init(onDelete: @escaping () -> Void, @ViewBuilder content: () -> Content) {
+        self.onDelete = onDelete
+        self.content = content()
+    }
+    
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // 删除按钮（底层）
+            HStack(spacing: 0) {
+                Spacer()
+                Button {
+                    HapticManager.medium()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        offset = -UIScreen.main.bounds.width
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        onDelete()
+                    }
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 15, weight: .medium))
+                        Text("删除")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(.white)
+                    .frame(width: 72)
+                    .frame(maxHeight: .infinity)
+                    .background(Color.red.opacity(0.85))
+                }
+            }
+            
+            // 内容层（可滑动）
+            content
+                .background(AppColors.surface)
+                .offset(x: offset)
+                .gesture(
+                    DragGesture(minimumDistance: 20, coordinateSpace: .local)
+                        .onChanged { value in
+                            let dx = value.translation.width
+                            if dx < 0 {
+                                // 左滑
+                                offset = max(dx, -120)
+                            } else if isSwiped {
+                                // 右滑回弹
+                                offset = min(-72 + dx, 0)
+                            }
+                        }
+                        .onEnded { value in
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                if value.translation.width < -100 && value.velocity.width < -300 {
+                                    // 快速全滑 → 直接删除
+                                    offset = -UIScreen.main.bounds.width
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                        HapticManager.medium()
+                                        onDelete()
+                                    }
+                                } else if value.translation.width < -40 {
+                                    // 停留在删除按钮位
+                                    offset = -72
+                                    isSwiped = true
+                                    HapticManager.light()
+                                } else {
+                                    // 回弹
+                                    offset = 0
+                                    isSwiped = false
+                                }
+                            }
+                        }
+                )
+        }
+        .clipped()
     }
 }

@@ -2,8 +2,7 @@
 //  SleepTabView.swift
 //  MomMate
 //
-//  Sleep tab main view and related components
-//  Extracted from MainTabView.swift for single responsibility
+//  Sleep tab — 现代极简风格
 //
 
 import SwiftUI
@@ -19,7 +18,6 @@ struct SleepTabView: View {
     @State private var showingSettings = false
     @AppStorage(StorageKeys.fontSizeFactor) private var fontSizeFactor: Double = 1.0
 
-    // Timer scoped to this view only (not the entire TabView)
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     private var todaySleepDuration: TimeInterval {
@@ -65,70 +63,79 @@ struct SleepTabView: View {
                     .ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: AppSpacing.lg) {
-                        EmotionalDailySummaryCard(
+                    VStack(spacing: AppSpacing.xl) {
+                        // 今日概览 — 简约横条
+                        SleepDailySummary(
                             todayDuration: todaySleepDuration,
                             yesterdayDuration: yesterdaySleepDuration,
                             sleepCount: todaySleepCount
                         )
 
+                        // 当前状态卡片
                         if let currentRecord = recordManager.currentSleepRecord {
                             SleepingStatusCard(
                                 record: currentRecord,
                                 currentTime: currentTime,
                                 onWakeUp: {
+                                    HapticManager.success()
                                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                         recordManager.endCurrentSleep()
                                     }
                                 },
                                 onWakeUpCustom: {
+                                    HapticManager.light()
                                     showingTimePicker = true
                                 }
                             )
                         } else {
                             AwakeStatusCard(
                                 onSleep: {
+                                    HapticManager.medium()
                                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                         recordManager.startSleep()
                                     }
                                 },
                                 onSleepCustom: {
+                                    HapticManager.light()
                                     showingTimePicker = true
                                 }
                             )
                         }
 
+                        // 最近记录
                         if !recordManager.completedRecords.isEmpty {
                             RecentSleepSection(
                                 records: Array(recordManager.completedRecords.prefix(5)),
+                                recordManager: recordManager,
                                 onShowAll: { showingHistory = true }
                             )
                         }
                     }
-                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.horizontal, AppSpacing.lg)
                     .padding(.top, AppSpacing.sm)
-                    .padding(.bottom, AppSpacing.xl)
+                    .padding(.bottom, AppSpacing.xxl)
                 }
             }
             .navigationTitle("睡眠")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("睡眠")
-                        .font(AppTypography.title3)
-                        .foregroundColor(AppColors.textPrimary)
-                }
-                ToolbarItems(showingSettings: $showingSettings, showingNotes: $showingNotes)
+                ToolbarItems(showingSettings: $showingSettings)
             }
             .id(fontSizeFactor)
             .sheet(isPresented: $showingHistory) {
                 HistoryView(recordManager: recordManager)
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(AppRadius.xxl)
             }
             .sheet(isPresented: $showingNotes) {
                 NotesView(notesManager: notesManager)
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(AppRadius.xxl)
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(AppRadius.xxl)
             }
             .sheet(isPresented: $showingTimePicker) {
                 TimePickerSheet(
@@ -149,8 +156,8 @@ struct SleepTabView: View {
     }
 }
 
-// MARK: - 今日睡眠状态概览卡片
-struct EmotionalDailySummaryCard: View {
+// MARK: - 今日睡眠概览 — 极简横条
+struct SleepDailySummary: View {
     let todayDuration: TimeInterval
     let yesterdayDuration: TimeInterval
     let sleepCount: Int
@@ -158,36 +165,47 @@ struct EmotionalDailySummaryCard: View {
     private var deltaText: String {
         let delta = (todayDuration - yesterdayDuration) / 3600
         if delta == 0 { return "与昨天持平" }
-        return delta > 0 ? "比昨天多 \(Int(delta)) 小时" : "比昨天少 \(abs(Int(delta))) 小时"
+        return delta > 0 ? "比昨天多 \(Int(delta))h" : "比昨天少 \(abs(Int(delta)))h"
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text("今日睡眠状态")
-                .font(AppTypography.captionMedium)
-                .foregroundColor(.white.opacity(0.85))
-
-            HStack(alignment: .lastTextBaseline, spacing: AppSpacing.xs) {
-                Text(formatDuration(todayDuration))
-                    .font(AppTypography.title1)
-                    .foregroundColor(.white)
-                Text("已记录 \(sleepCount) 次")
+        HStack(spacing: AppSpacing.md) {
+            // 左侧色条
+            RoundedRectangle(cornerRadius: 2)
+                .fill(AppColors.sleep)
+                .frame(width: 3, height: 44)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("今日睡眠")
                     .font(AppTypography.caption)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(AppColors.textSecondary)
+                
+                HStack(alignment: .lastTextBaseline, spacing: AppSpacing.xs) {
+                    Text(formatDuration(todayDuration))
+                        .font(AppTypography.title2)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    Text("·  \(sleepCount) 次")
+                        .font(AppTypography.footnote)
+                        .foregroundColor(AppColors.textTertiary)
+                }
             }
-
+            
+            Spacer()
+            
             Text(deltaText)
-                .font(AppTypography.footnote)
-                .foregroundColor(.white.opacity(0.8))
+                .font(AppTypography.caption)
+                .foregroundColor(AppColors.textTertiary)
+                .padding(.horizontal, AppSpacing.sm)
+                .padding(.vertical, AppSpacing.xxs)
+                .background(
+                    Capsule()
+                        .fill(AppColors.surfaceSecondary)
+                )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(AppSpacing.md)
-        .background(AppColors.primary)
+        .background(AppColors.sleepTint)
         .cornerRadius(AppRadius.lg)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .stroke(AppColors.primary.opacity(0.15), lineWidth: 1)
-        )
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -212,53 +230,49 @@ struct SleepingStatusCard: View {
     }
 
     var body: some View {
-        VStack(spacing: AppSpacing.lg) {
+        VStack(spacing: AppSpacing.xl) {
+            // 状态图标 — 简约
             ZStack {
-                Circle()
-                    .fill(AppColors.sleep)
-                    .frame(width: 96, height: 96)
-
-                Image(systemName: "moon.zzz.fill")
-                    .font(.system(size: 38, weight: .medium))
-                    .foregroundColor(.white)
+                BreathingCircle(color: AppColors.sleep, size: 88)
+                
+                Image(systemName: "moon.zzz")
+                    .font(.system(size: 32, weight: .light))
+                    .foregroundColor(AppColors.sleep)
             }
-            .frame(height: 136)
+            .frame(height: 120)
 
             VStack(spacing: AppSpacing.xs) {
                 Text(formatDuration(sleepDuration))
-                    .font(AppTypography.timerSmall)
-                    .foregroundColor(AppColors.sleep)
+                    .font(AppTypography.timer)
+                    .foregroundColor(AppColors.textPrimary)
 
-                Text("宝宝正在睡觉")
+                Text("正在睡觉")
                     .font(AppTypography.callout)
                     .foregroundColor(AppColors.textSecondary)
 
                 Text("\(formatTime(record.sleepTime)) 入睡")
-                    .font(AppTypography.footnote)
+                    .font(AppTypography.caption)
                     .foregroundColor(AppColors.textTertiary)
             }
 
             VStack(spacing: AppSpacing.sm) {
                 Button(action: onWakeUp) {
                     HStack(spacing: AppSpacing.xs) {
-                        Image(systemName: "sun.max.fill")
+                        Image(systemName: "sun.max")
                         Text("记录醒来")
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle(color: AppColors.accent))
-                .accessibilityLabel("记录宝宝醒来")
-                .accessibilityHint("点击标记宝宝已醒来")
 
                 Button(action: onWakeUpCustom) {
                     Text("选择其他时间")
                         .font(AppTypography.footnote)
-                        .foregroundColor(AppColors.textSecondary)
+                        .foregroundColor(AppColors.textTertiary)
                 }
             }
-            .padding(.top, AppSpacing.sm)
         }
-        .padding(.vertical, AppSpacing.xl)
-        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.xxl)
+        .padding(.horizontal, AppSpacing.lg)
         .glassCard(padding: 0)
     }
 
@@ -280,57 +294,72 @@ struct SleepingStatusCard: View {
 struct AwakeStatusCard: View {
     let onSleep: () -> Void
     let onSleepCustom: () -> Void
+    @State private var sunRotation: Double = 0
 
     var body: some View {
-        VStack(spacing: AppSpacing.lg) {
+        VStack(spacing: AppSpacing.xl) {
             ZStack {
+                // Sun halo rotation
                 Circle()
-                    .fill(AppColors.awake)
-                    .frame(width: 84, height: 84)
+                    .fill(
+                        AngularGradient(
+                            colors: [AppColors.awake.opacity(0.08), AppColors.awake.opacity(0.02), AppColors.awake.opacity(0.08)],
+                            center: .center
+                        )
+                    )
+                    .frame(width: 110, height: 110)
+                    .rotationEffect(.degrees(sunRotation))
+                
+                Circle()
+                    .fill(AppColors.awake.opacity(0.08))
+                    .frame(width: 88, height: 88)
 
-                Image(systemName: "sun.max.fill")
-                    .font(.system(size: 36, weight: .medium))
-                    .foregroundColor(.white)
+                Image(systemName: "sun.max")
+                    .font(.system(size: 32, weight: .light))
+                    .foregroundColor(AppColors.awake)
+            }
+            .onAppear {
+                withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
+                    sunRotation = 360
+                }
             }
 
             VStack(spacing: AppSpacing.xs) {
                 Text("宝宝醒着")
                     .font(AppTypography.title2)
-                    .foregroundColor(AppColors.awake)
+                    .foregroundColor(AppColors.textPrimary)
 
                 Text("点击下方按钮记录入睡")
                     .font(AppTypography.callout)
-                    .foregroundColor(AppColors.textSecondary)
+                    .foregroundColor(AppColors.textTertiary)
             }
 
             VStack(spacing: AppSpacing.sm) {
                 Button(action: onSleep) {
                     HStack(spacing: AppSpacing.xs) {
-                        Image(systemName: "moon.fill")
+                        Image(systemName: "moon")
                         Text("记录入睡")
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle(color: AppColors.sleep))
-                .accessibilityLabel("记录宝宝入睡")
-                .accessibilityHint("点击标记宝宝已入睡")
 
                 Button(action: onSleepCustom) {
                     Text("选择其他时间")
                         .font(AppTypography.footnote)
-                        .foregroundColor(AppColors.textSecondary)
+                        .foregroundColor(AppColors.textTertiary)
                 }
             }
-            .padding(.top, AppSpacing.sm)
         }
-        .padding(.vertical, AppSpacing.xl)
-        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.xxl)
+        .padding(.horizontal, AppSpacing.lg)
         .glassCard(padding: 0)
     }
 }
 
-// MARK: - 最近睡眠记录区块
+// MARK: - 最近睡眠记录
 struct RecentSleepSection: View {
     let records: [SleepRecord]
+    let recordManager: SleepRecordManager
     let onShowAll: () -> Void
 
     var body: some View {
@@ -339,11 +368,20 @@ struct RecentSleepSection: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
-                    SleepRecordRowView(record: record)
+                    SwipeDeleteRow(onDelete: {
+                        withAnimation { recordManager.deleteRecord(record) }
+                    }) {
+                        SleepRecordRowView(record: record)
+                    }
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .opacity
+                    ))
 
                     if index < records.count - 1 {
                         Divider()
-                            .padding(.leading, 56)
+                            .foregroundColor(AppColors.divider)
+                            .padding(.leading, 50)
                     }
                 }
             }
@@ -353,37 +391,60 @@ struct RecentSleepSection: View {
     }
 }
 
-// MARK: - 睡眠记录行
+// MARK: - 睡眠记录行 — 重新设计
 struct SleepRecordRowView: View {
     let record: SleepRecord
 
+    private static let timeOnly: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            IconCircle(
-                icon: "moon.zzz.fill",
-                size: 40,
-                iconSize: 18,
-                color: AppColors.sleep
-            )
+            // 睡眠时长（主角）
+            VStack(spacing: 0) {
+                Text(durationHours)
+                    .font(AppTypography.title3)
+                    .foregroundColor(AppColors.textPrimary)
+                Text(durationMinutes)
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            .frame(width: 48)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: AppSpacing.xs) {
-                    Text(record.formattedSleepTime)
-                        .font(AppTypography.calloutMedium)
+            // 竖线色条
+            RoundedRectangle(cornerRadius: 1)
+                .fill(AppColors.sleep.opacity(0.4))
+                .frame(width: 2, height: 32)
 
-                    if let wakeTime = record.formattedWakeTime {
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 10, weight: .bold))
+            // 时间线：入睡 → 醒来
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: AppSpacing.xxs) {
+                    Image(systemName: "moon.fill")
+                        .font(.system(size: 9))
+                        .foregroundColor(AppColors.sleep)
+                    Text(Self.timeOnly.string(from: record.sleepTime))
+                        .font(AppTypography.footnoteMedium)
+                        .foregroundColor(AppColors.textPrimary)
+
+                    if let wakeTime = record.wakeTime {
+                        Text("→")
+                            .font(.system(size: 10))
                             .foregroundColor(AppColors.textTertiary)
-                        Text(wakeTime)
-                            .font(AppTypography.calloutMedium)
+                        Image(systemName: "sun.max.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(AppColors.awake)
+                        Text(Self.timeOnly.string(from: wakeTime))
+                            .font(AppTypography.footnoteMedium)
+                            .foregroundColor(AppColors.textPrimary)
+                    } else {
+                        Text("· 睡眠中")
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.sleep)
                     }
                 }
-                .foregroundColor(AppColors.textPrimary)
-
-                Text(record.formattedDuration)
-                    .font(AppTypography.footnote)
-                    .foregroundColor(AppColors.textSecondary)
             }
 
             Spacer()
@@ -394,6 +455,17 @@ struct SleepRecordRowView: View {
         }
         .padding(.vertical, AppSpacing.sm)
         .padding(.horizontal, AppSpacing.md)
+    }
+
+    // MARK: - Helpers
+    private var durationHours: String {
+        guard let d = record.duration else { return "—" }
+        return "\(Int(d) / 3600)时"
+    }
+
+    private var durationMinutes: String {
+        guard let d = record.duration else { return "" }
+        return "\((Int(d) % 3600) / 60)分"
     }
 
     private func relativeDateString(_ date: Date) -> String {
@@ -450,6 +522,7 @@ struct TimePickerSheet: View {
                     Button("取消") {
                         dismiss()
                     }
+                    .foregroundColor(AppColors.textSecondary)
                 }
             }
         }
@@ -457,23 +530,16 @@ struct TimePickerSheet: View {
     }
 }
 
-// MARK: - 睡眠页面工具栏
+// MARK: - 工具栏
 struct ToolbarItems: ToolbarContent {
     @Binding var showingSettings: Bool
-    @Binding var showingNotes: Bool
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
             Button(action: { showingSettings = true }) {
                 Image(systemName: "gearshape")
-                    .foregroundColor(AppColors.primary)
-            }
-        }
-
-        ToolbarItem(placement: .navigationBarTrailing) {
-            Button(action: { showingNotes = true }) {
-                Image(systemName: "doc.text")
-                    .foregroundColor(AppColors.primary)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(AppColors.textSecondary)
             }
         }
     }

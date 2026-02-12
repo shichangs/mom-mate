@@ -2,12 +2,10 @@
 //  HistoryView.swift
 //  MomMate
 //
-//  Sleep history list and record editing views
+//  Sleep history — 现代极简风格
 //
 
 import SwiftUI
-
-// MARK: - History View
 
 struct HistoryView: View {
     @ObservedObject var recordManager: SleepRecordManager
@@ -17,7 +15,7 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                AppColors.backgroundGradient
+                AppColors.background
                     .ignoresSafeArea()
 
                 if recordManager.completedRecords.isEmpty {
@@ -28,8 +26,8 @@ struct HistoryView: View {
                     )
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: AppSpacing.md) {
-                            ForEach(recordManager.completedRecords) { record in
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(recordManager.completedRecords.enumerated()), id: \.element.id) { index, record in
                                 HistoryRecordCard(record: record)
                                     .onTapGesture {
                                         editingRecord = record
@@ -41,11 +39,16 @@ struct HistoryView: View {
                                             Label("删除", systemImage: "trash")
                                         }
                                     }
-                                    .accessibilityElement(children: .combine)
-                                    .accessibilityLabel("睡眠记录，\(record.formattedDuration)")
-                                    .accessibilityHint("点击编辑，长按查看更多选项")
+
+                                if index < recordManager.completedRecords.count - 1 {
+                                    Divider()
+                                        .foregroundColor(AppColors.divider)
+                                        .padding(.leading, 60)
+                                }
                             }
                         }
+                        .background(AppColors.surface)
+                        .cornerRadius(AppRadius.lg)
                         .padding(.horizontal, AppSpacing.lg)
                         .padding(.vertical, AppSpacing.md)
                     }
@@ -67,8 +70,7 @@ struct HistoryView: View {
     }
 }
 
-// MARK: - History Record Card
-
+// MARK: - 历史记录卡片
 struct HistoryRecordCard: View {
     let record: SleepRecord
 
@@ -76,53 +78,42 @@ struct HistoryRecordCard: View {
         HStack(spacing: AppSpacing.md) {
             VStack(spacing: 2) {
                 Text(dayOfMonth)
-                    .font(AppTypography.title2)
-                    .foregroundColor(AppColors.primary)
+                    .font(AppTypography.title3)
+                    .foregroundColor(AppColors.textPrimary)
                 Text(monthAbbrev)
                     .font(AppTypography.caption)
-                    .foregroundColor(AppColors.textSecondary)
+                    .foregroundColor(AppColors.textTertiary)
             }
-            .frame(width: 48)
+            .frame(width: 40)
 
-            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: AppSpacing.xs) {
                     Text(record.formattedSleepTime)
                         .font(AppTypography.calloutMedium)
 
                     if let wakeTime = record.formattedWakeTime {
                         Image(systemName: "arrow.right")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundColor(AppColors.textTertiary)
-                            .accessibilityHidden(true)
                         Text(wakeTime)
                             .font(AppTypography.calloutMedium)
                     }
                 }
                 .foregroundColor(AppColors.textPrimary)
 
-                HStack(spacing: AppSpacing.sm) {
-                    Label(record.formattedDuration, systemImage: "clock.fill")
-                        .font(AppTypography.footnote)
-                        .foregroundColor(AppColors.textSecondary)
-                }
+                Text(record.formattedDuration)
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 11, weight: .medium))
                 .foregroundColor(AppColors.textTertiary)
-                .accessibilityHidden(true)
         }
-        .padding(AppSpacing.md)
-        .background(AppColors.surface)
-        .cornerRadius(AppRadius.lg)
-        .shadow(
-            color: AppShadow.small.color,
-            radius: AppShadow.small.radius,
-            x: AppShadow.small.x,
-            y: AppShadow.small.y
-        )
+        .padding(.vertical, AppSpacing.sm)
+        .padding(.horizontal, AppSpacing.md)
     }
 
     private var dayOfMonth: String {
@@ -134,8 +125,7 @@ struct HistoryRecordCard: View {
     }
 }
 
-// MARK: - Edit Record View
-
+// MARK: - 编辑记录
 struct EditRecordView: View {
     let record: SleepRecord
     @ObservedObject var recordManager: SleepRecordManager

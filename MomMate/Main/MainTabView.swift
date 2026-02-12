@@ -48,6 +48,14 @@ struct MainTabView: View {
                 .tag(3)
         }
         .tint(AppColors.primary)
+        .onAppear {
+            let appearance = UITabBarAppearance()
+            appearance.configureWithDefaultBackground()
+            appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+            appearance.shadowColor = UIColor(AppColors.border.opacity(0.3))
+            UITabBar.appearance().standardAppearance = appearance
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
     }
 }
 
