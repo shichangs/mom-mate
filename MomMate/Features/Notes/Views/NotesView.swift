@@ -2,7 +2,7 @@
 //  NotesView.swift
 //  MomMate
 //
-//  Apple-inspired markdown notes view
+//  Notes view — 现代极简风格
 //
 
 import SwiftUI
@@ -13,15 +13,14 @@ struct NotesView: View {
     @State private var isEditing = false
     @State private var editedNotes: String = ""
     @FocusState private var isFocused: Bool
-    
+
     var body: some View {
         NavigationView {
             ZStack {
-                AppColors.backgroundGradient
+                AppColors.background
                     .ignoresSafeArea()
-                
+
                 if isEditing {
-                    // 编辑模式
                     ScrollView {
                         TextEditor(text: $editedNotes)
                             .font(.system(.body, design: .monospaced))
@@ -34,7 +33,6 @@ struct NotesView: View {
                             .padding(AppSpacing.lg)
                     }
                 } else {
-                    // 查看模式
                     ScrollView {
                         MarkdownTextView(text: notesManager.notes)
                             .padding(AppSpacing.lg)
@@ -57,7 +55,7 @@ struct NotesView: View {
                         }
                     }
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if isEditing {
                         Button("保存") {
@@ -90,7 +88,7 @@ struct NotesView: View {
 // MARK: - Markdown 文本视图
 struct MarkdownTextView: View {
     let text: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             ForEach(parseMarkdown(text), id: \.id) { block in
@@ -101,22 +99,16 @@ struct MarkdownTextView: View {
         .padding(AppSpacing.lg)
         .background(AppColors.surface)
         .cornerRadius(AppRadius.xl)
-        .shadow(
-            color: AppShadow.medium.color,
-            radius: AppShadow.medium.radius,
-            x: AppShadow.medium.x,
-            y: AppShadow.medium.y
-        )
     }
-    
+
     private func parseMarkdown(_ text: String) -> [TextBlock] {
         var blocks: [TextBlock] = []
         let lines = text.components(separatedBy: .newlines)
         var currentBlock: TextBlock?
-        
+
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            
+
             if trimmed.isEmpty {
                 if let block = currentBlock {
                     blocks.append(block)
@@ -124,29 +116,21 @@ struct MarkdownTextView: View {
                 }
                 continue
             }
-            
+
             if trimmed.hasPrefix("# ") {
-                if let block = currentBlock {
-                    blocks.append(block)
-                }
+                if let block = currentBlock { blocks.append(block) }
                 currentBlock = TextBlock(type: .h1, content: String(trimmed.dropFirst(2)))
             } else if trimmed.hasPrefix("## ") {
-                if let block = currentBlock {
-                    blocks.append(block)
-                }
+                if let block = currentBlock { blocks.append(block) }
                 currentBlock = TextBlock(type: .h2, content: String(trimmed.dropFirst(3)))
             } else if trimmed.hasPrefix("### ") {
-                if let block = currentBlock {
-                    blocks.append(block)
-                }
+                if let block = currentBlock { blocks.append(block) }
                 currentBlock = TextBlock(type: .h3, content: String(trimmed.dropFirst(4)))
             } else if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
                 if let block = currentBlock, block.type == .list {
                     currentBlock?.content += "\n" + String(trimmed.dropFirst(2))
                 } else {
-                    if let block = currentBlock {
-                        blocks.append(block)
-                    }
+                    if let block = currentBlock { blocks.append(block) }
                     currentBlock = TextBlock(type: .list, content: String(trimmed.dropFirst(2)))
                 }
             } else if trimmed.hasPrefix("```") {
@@ -155,21 +139,19 @@ struct MarkdownTextView: View {
                 if let block = currentBlock, block.type == .paragraph {
                     currentBlock?.content += "\n" + trimmed
                 } else {
-                    if let block = currentBlock {
-                        blocks.append(block)
-                    }
+                    if let block = currentBlock { blocks.append(block) }
                     currentBlock = TextBlock(type: .paragraph, content: trimmed)
                 }
             }
         }
-        
+
         if let block = currentBlock {
             blocks.append(block)
         }
-        
+
         return blocks
     }
-    
+
     @ViewBuilder
     private func renderBlock(_ block: TextBlock) -> some View {
         switch block.type {
@@ -192,8 +174,8 @@ struct MarkdownTextView: View {
         case .paragraph:
             Text(block.content)
                 .font(AppTypography.body)
-                .foregroundColor(AppColors.textPrimary)
-                .lineSpacing(4)
+                .foregroundColor(AppColors.textSecondary)
+                .lineSpacing(6)
                 .padding(.vertical, AppSpacing.xxs)
         case .list:
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
@@ -201,11 +183,11 @@ struct MarkdownTextView: View {
                     HStack(alignment: .top, spacing: AppSpacing.xs) {
                         Circle()
                             .fill(AppColors.primary)
-                            .frame(width: 6, height: 6)
+                            .frame(width: 5, height: 5)
                             .padding(.top, 7)
                         Text(item)
                             .font(AppTypography.body)
-                            .foregroundColor(AppColors.textPrimary)
+                            .foregroundColor(AppColors.textSecondary)
                     }
                 }
             }

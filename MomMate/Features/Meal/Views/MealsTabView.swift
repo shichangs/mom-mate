@@ -2,8 +2,7 @@
 //  MealsTabView.swift
 //  MomMate
 //
-//  Meal tab main view and related components
-//  Extracted from MainTabView.swift for single responsibility
+//  Meal tab — 现代极简风格
 //
 
 import SwiftUI
@@ -11,16 +10,22 @@ import SwiftUI
 // MARK: - 饮食 Tab 主视图
 struct MealsTabView: View {
     @ObservedObject var mealRecordManager: MealRecordManager
-    @State private var showingAddMeal = false
+    @State private var showingAddSheet = false
     @State private var showingFoodList = false
-    @State private var selectedMealType: MealType? = nil
+    @State private var selectedFilter: MealType?
+    @State private var showFAB = true
     @AppStorage(StorageKeys.fontSizeFactor) private var fontSizeFactor: Double = 1.0
 
-    var filteredRecords: [MealRecord] {
-        if let type = selectedMealType {
-            return mealRecordManager.mealRecordsByType(type)
+    private var filteredRecords: [MealRecord] {
+        let sorted = mealRecordManager.sortedMealRecords
+        if let filter = selectedFilter {
+            return sorted.filter { $0.mealType == filter }
         }
-        return mealRecordManager.sortedMealRecords
+        return sorted
+    }
+
+    private var todayRecords: [MealRecord] {
+        mealRecordManager.mealRecordsForToday()
     }
 
     var body: some View {
@@ -29,338 +34,204 @@ struct MealsTabView: View {
                 AppColors.background
                     .ignoresSafeArea()
 
-                if mealRecordManager.mealRecords.isEmpty {
-                    VStack(spacing: AppSpacing.lg) {
-                        EmptyStateView(
-                            icon: "fork.knife.circle",
-                            title: "还没有饮食记录",
-                            subtitle: "点击右上角添加宝宝的饮食",
-                            color: AppColors.meal
+                ScrollView {
+                    VStack(spacing: AppSpacing.xl) {
+                        // 今日概览
+                        MealDailySummary(records: todayRecords)
+
+                        // 食物清单入口
+                        FoodListEntryButton(onTap: { showingFoodList = true })
+
+                        // 筛选栏
+                        MealFilterBar(
+                            selectedFilter: $selectedFilter,
+                            records: mealRecordManager.mealRecords
                         )
 
-                        FoodListEntryCard {
-                            showingFoodList = true
-                        }
-                        .padding(.horizontal, AppSpacing.lg)
-                    }
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: AppSpacing.xl) {
-                            TodaySummaryCard(records: mealRecordManager.mealRecordsForToday())
+                        // 记录列表
+                        if filteredRecords.isEmpty {
+                            EmptyStateView(
+                                icon: "fork.knife",
+                                title: "暂无记录",
+                                subtitle: "点击右下角 + 添加饮食记录"
+                            )
+                        } else {
+                            LazyVStack(spacing: 0) {
+                                ForEach(Array(filteredRecords.enumerated()), id: \.element.id) { index, record in
+                                    SwipeDeleteRow(onDelete: {
+                                        withAnimation { mealRecordManager.deleteMealRecord(record) }
+                                    }) {
+                                        MealRecordRow(record: record)
+                                    }
 
-                            FoodListEntryCard {
-                                showingFoodList = true
-                            }
-
-                            MealFilterBar(selectedType: $selectedMealType)
-
-                            LazyVStack(spacing: AppSpacing.sm) {
-                                ForEach(filteredRecords) { record in
-                                    MealRecordCardView(record: record)
-                                        .contextMenu {
-                                            Button(role: .destructive) {
-                                                mealRecordManager.deleteMealRecord(record)
-                                            } label: {
-                                                Label("删除", systemImage: "trash")
-                                            }
-                                        }
-                                        .accessibilityElement(children: .combine)
-                                        .accessibilityLabel("\(record.mealType.rawValue)记录，\(record.formattedTime)")
+                                    if index < filteredRecords.count - 1 {
+                                        Divider()
+                                            .foregroundColor(AppColors.divider)
+                                            .padding(.leading, 50)
+                                    }
                                 }
                             }
+                            .background(AppColors.surface)
+                            .cornerRadius(AppRadius.lg)
                         }
-                        .padding(.horizontal, AppSpacing.lg)
-                        .padding(.top, AppSpacing.md)
-                        .padding(.bottom, AppSpacing.xxl)
+                    }
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.top, AppSpacing.sm)
+                    .padding(.bottom, 100)
+                }
+
+                // Floating add button — scroll-aware
+                if showFAB {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                HapticManager.light()
+                                showingAddSheet = true
+                            }) {
+                                Image(systemName: "plus")
+                            }
+                            .buttonStyle(FloatingButtonStyle(color: AppColors.meal))
+                            .padding(.trailing, AppSpacing.xl)
+                            .padding(.bottom, AppSpacing.lg)
+                            .transition(.scale.combined(with: .opacity))
+                        }
                     }
                 }
             }
             .navigationTitle("饮食")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("饮食")
-                        .font(AppTypography.title3)
-                        .foregroundColor(AppColors.textPrimary)
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { showingFoodList = true }) {
-                        Image(systemName: "list.bullet.circle.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(AppColors.meal)
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddMeal = true }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(AppColors.meal)
-                    }
-                }
-            }
-            .sheet(isPresented: $showingAddMeal) {
+            .id(fontSizeFactor)
+            .sheet(isPresented: $showingAddSheet) {
                 QuickAddMealSheet(mealRecordManager: mealRecordManager)
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(AppRadius.xxl)
             }
             .sheet(isPresented: $showingFoodList) {
-                FoodListView()
+                FoodListView(mealRecordManager: mealRecordManager)
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(AppRadius.xxl)
             }
-            .id(fontSizeFactor)
         }
     }
 }
 
-// MARK: - 食物清单入口卡片
-struct FoodListEntryCard: View {
-    var action: () -> Void
+// MARK: - 今日饮食概览
+struct MealDailySummary: View {
+    let records: [MealRecord]
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: AppSpacing.md) {
-                IconCircle(
-                    icon: "list.bullet",
-                    size: 38,
-                    iconSize: 16,
-                    color: AppColors.meal
-                )
+        HStack(spacing: AppSpacing.md) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(AppColors.meal)
+                .frame(width: 3, height: 44)
 
-                VStack(alignment: .leading, spacing: AppSpacing.xxs) {
-                    Text("食物清单")
-                        .font(AppTypography.calloutMedium)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("今日饮食")
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textSecondary)
+
+                HStack(alignment: .lastTextBaseline, spacing: AppSpacing.xs) {
+                    Text("\(records.count) 次记录")
+                        .font(AppTypography.title2)
                         .foregroundColor(AppColors.textPrimary)
-                    Text("统一管理所有食物，支持删除和排序")
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textSecondary)
                 }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppColors.textTertiary)
             }
-            .padding(AppSpacing.md)
-            .background(AppColors.surface)
-            .cornerRadius(AppRadius.lg)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppRadius.lg)
-                    .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
 
-// MARK: - 食物目录存储
-enum FoodCatalogStore {
-    static let key = StorageKeys.foodCatalog
-    static let legacyKey = StorageKeys.customFoods
-    static let defaultFoods = [
-        "米糊", "南瓜泥", "胡萝卜泥", "苹果泥", "香蕉泥",
-        "土豆泥", "鸡蛋", "牛奶", "酸奶", "面条"
-    ]
+            Spacer()
 
-    static func load(from data: Data) -> [String] {
-        do {
-            let decoded = try JSONDecoder().decode([String].self, from: data)
-            if !decoded.isEmpty { return normalized(decoded) }
-        } catch {
-            print("[MomMate] Failed to load food catalog: \(error.localizedDescription)")
-        }
-
-        let legacy = (UserDefaults.standard.data(forKey: legacyKey)).flatMap {
-            try? JSONDecoder().decode([String].self, from: $0)
-        } ?? []
-
-        return normalized(defaultFoods + legacy)
-    }
-
-    static func save(_ foods: [String]) -> Data? {
-        do {
-            return try JSONEncoder().encode(normalized(foods))
-        } catch {
-            print("[MomMate] Failed to save food catalog: \(error.localizedDescription)")
-            return nil
-        }
-    }
-
-    private static func normalized(_ foods: [String]) -> [String] {
-        var seen = Set<String>()
-        var result: [String] = []
-        for item in foods {
-            let trimmed = item.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty || seen.contains(trimmed) {
-                continue
+            if !records.isEmpty {
+                HStack(spacing: AppSpacing.xs) {
+                    ForEach(mealTypeSummary(), id: \.type) { item in
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(item.color)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.sm)
+                .padding(.vertical, AppSpacing.xxs)
+                .background(
+                    Capsule()
+                        .fill(AppColors.surfaceSecondary)
+                )
             }
-            seen.insert(trimmed)
-            result.append(trimmed)
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.mealTint)
+        .cornerRadius(AppRadius.lg)
+    }
+
+    private func mealTypeSummary() -> [(type: String, color: Color)] {
+        var result: [(type: String, color: Color)] = []
+        let types = Set(records.map { $0.mealType })
+        for type in MealType.allCases where types.contains(type) {
+            result.append((type: type.rawValue, color: type.color))
         }
         return result
     }
 }
 
-// MARK: - 食物清单视图
-struct FoodListView: View {
-    @Environment(\.dismiss) var dismiss
-    @AppStorage(FoodCatalogStore.key) private var foodCatalogData: Data = Data()
-    @State private var newFoodName: String = ""
-    @State private var foods: [String] = []
+// MARK: - 食物清单入口
+struct FoodListEntryButton: View {
+    let onTap: () -> Void
 
     var body: some View {
-        NavigationView {
-            List {
-                Section {
-                    Text("统一管理默认和自定义食物；支持删除和拖拽排序。")
-                        .font(AppTypography.subhead)
-                        .foregroundColor(AppColors.textSecondary)
-                }
+        Button(action: onTap) {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(AppColors.meal)
 
-                Section("添加新食物") {
-                    HStack {
-                        TextField("食物名称", text: $newFoodName)
-                        Button("添加", action: addFood)
-                            .disabled(newFoodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                }
-
-                Section("食物列表 (\(foods.count))") {
-                    ForEach(foods, id: \.self) { food in
-                        Text(food)
-                            .font(AppTypography.body)
-                    }
-                    .onDelete(perform: removeFoods)
-                    .onMove(perform: moveFoods)
-                }
-            }
-            .navigationTitle("食物清单")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    EditButton()
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") { dismiss() }
-                        .fontWeight(.semibold)
-                }
-            }
-            .onAppear {
-                foods = FoodCatalogStore.load(from: foodCatalogData)
-                persistFoods()
-            }
-        }
-    }
-
-    private func addFood() {
-        let trimmed = newFoodName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        if !foods.contains(trimmed) {
-            foods.append(trimmed)
-            persistFoods()
-        }
-        newFoodName = ""
-    }
-
-    private func removeFoods(at offsets: IndexSet) {
-        foods.remove(atOffsets: offsets)
-        persistFoods()
-    }
-
-    private func moveFoods(from source: IndexSet, to destination: Int) {
-        foods.move(fromOffsets: source, toOffset: destination)
-        persistFoods()
-    }
-
-    private func persistFoods() {
-        if let data = FoodCatalogStore.save(foods) {
-            foodCatalogData = data
-        }
-    }
-}
-
-// MARK: - 今日饮食概览卡片
-struct TodaySummaryCard: View {
-    let records: [MealRecord]
-
-    var body: some View {
-        VStack(spacing: AppSpacing.md) {
-            HStack {
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text("今日饮食")
-                        .font(AppTypography.title2)
-                        .foregroundColor(AppColors.meal)
-
-                    Text("\(records.count) 次记录")
-                        .font(AppTypography.callout)
-                        .foregroundColor(AppColors.textSecondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("妈妈食谱")
+                        .font(AppTypography.calloutMedium)
+                        .foregroundColor(AppColors.textPrimary)
+                    Text("管理常用食材与辅食清单")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
                 }
 
                 Spacer()
 
-                IconCircle(
-                    icon: "fork.knife",
-                    size: 56,
-                    iconSize: 26,
-                    color: AppColors.meal,
-                    filled: true,
-                    gradient: AppColors.mealGradient
-                )
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(AppColors.textTertiary)
             }
-
-            if !records.isEmpty {
-                Divider()
-
-                HStack(spacing: AppSpacing.lg) {
-                    ForEach(MealType.allCases.prefix(4), id: \.self) { type in
-                        let count = records.filter { $0.mealType == type }.count
-                        if count > 0 {
-                            VStack(spacing: 4) {
-                                Text("\(count)")
-                                    .font(AppTypography.title2)
-                                    .foregroundColor(type.color)
-                                Text(type.rawValue)
-                                    .font(AppTypography.caption)
-                                    .foregroundColor(AppColors.textSecondary)
-                            }
-                            .frame(minWidth: 50)
-                            .padding(.vertical, AppSpacing.xs)
-                            .background(
-                                RoundedRectangle(cornerRadius: AppRadius.sm)
-                                    .fill(type.color.opacity(0.1))
-                            )
-                        }
-                    }
-                    Spacer()
-                }
-            }
+            .padding(AppSpacing.md)
+            .background(AppColors.surface)
+            .cornerRadius(AppRadius.lg)
         }
-        .glassCard()
     }
 }
 
-// MARK: - 餐次筛选栏
+// MARK: - 筛选栏
 struct MealFilterBar: View {
-    @Binding var selectedType: MealType?
+    @Binding var selectedFilter: MealType?
+    let records: [MealRecord]
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppSpacing.xs) {
                 FilterChip(
                     title: "全部",
-                    isSelected: selectedType == nil,
-                    color: AppColors.meal
+                    count: records.count,
+                    isSelected: selectedFilter == nil,
+                    color: AppColors.primary
                 ) {
-                    withAnimation(.spring(response: 0.3)) {
-                        selectedType = nil
-                    }
+                    withAnimation(AppAnimation.springSnappy) { selectedFilter = nil }
                 }
 
                 ForEach(MealType.allCases, id: \.self) { type in
+                    let count = records.filter { $0.mealType == type }.count
                     FilterChip(
                         title: type.rawValue,
-                        isSelected: selectedType == type,
-                        color: type.color
+                        count: count,
+                        isSelected: selectedFilter == type,
+                        color: AppColors.meal
                     ) {
-                        withAnimation(.spring(response: 0.3)) {
-                            selectedType = selectedType == type ? nil : type
+                        withAnimation(AppAnimation.springSnappy) {
+                            selectedFilter = selectedFilter == type ? nil : type
                         }
                     }
                 }
@@ -369,29 +240,53 @@ struct MealFilterBar: View {
     }
 }
 
-// MARK: - 饮食记录卡片
-struct MealRecordCardView: View {
+struct FilterChip: View {
+    let title: String
+    let count: Int
+    let isSelected: Bool
+    let color: Color
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: AppSpacing.xxs) {
+                Text(title)
+                if count > 0 {
+                    Text("\(count)")
+                        .foregroundColor(isSelected ? .white.opacity(0.7) : color.opacity(0.5))
+                }
+            }
+            .font(AppTypography.footnoteMedium)
+            .foregroundColor(isSelected ? .white : AppColors.textSecondary)
+            .padding(.horizontal, AppSpacing.sm)
+            .padding(.vertical, AppSpacing.xs)
+            .background(
+                Capsule()
+                    .fill(isSelected ? color : AppColors.surfaceSecondary)
+            )
+        }
+    }
+}
+
+// MARK: - 饮食记录行
+struct MealRecordRow: View {
     let record: MealRecord
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            IconCircle(
-                icon: record.mealType.icon,
-                size: 48,
-                iconSize: 22,
-                color: record.mealType.color,
-                filled: true
-            )
+            // 餐次小色块
+            RoundedRectangle(cornerRadius: 3)
+                .fill(record.mealType.color.opacity(0.6))
+                .frame(width: 6, height: 28)
+                .padding(.leading, 2)
 
-            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
-                HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: AppSpacing.xs) {
                     Text(record.mealType.rawValue)
-                        .font(AppTypography.bodySemibold)
+                        .font(AppTypography.calloutMedium)
                         .foregroundColor(AppColors.textPrimary)
 
                     if !record.foodItems.isEmpty {
-                        Text("・")
-                            .foregroundColor(AppColors.textTertiary)
                         Text(record.foodItems.joined(separator: "、"))
                             .font(AppTypography.callout)
                             .foregroundColor(AppColors.textSecondary)
@@ -399,168 +294,187 @@ struct MealRecordCardView: View {
                     }
                 }
 
-                Text(record.formattedDate)
-                    .font(AppTypography.footnote)
-                    .foregroundColor(AppColors.textTertiary)
+                if !record.amount.isEmpty || !record.notes.isEmpty {
+                    Text([record.amount, record.notes].filter { !$0.isEmpty }.joined(separator: " · "))
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(record.relativeTime)
-                    .font(AppTypography.caption)
-                    .foregroundColor(AppColors.textTertiary)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppColors.textTertiary)
-            }
+            Text(relativeTimeString(record.date))
+                .font(AppTypography.caption)
+                .foregroundColor(AppColors.textTertiary)
         }
-        .padding(AppSpacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .fill(AppColors.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
-        )
+        .padding(.vertical, AppSpacing.sm)
+        .padding(.horizontal, AppSpacing.md)
+    }
+    
+    private func relativeTimeString(_ date: Date) -> String {
+        let interval = Date().timeIntervalSince(date)
+        if interval < 60 {
+            return "刚刚"
+        } else if interval < 3600 {
+            return "\(Int(interval / 60))分钟前"
+        } else if interval < 86400 {
+            return "\(Int(interval / 3600))小时前"
+        } else if interval < 172800 {
+            return "昨天"
+        } else {
+            return DateFormatters.monthDayZh.string(from: date)
+        }
     }
 }
 
-// MARK: - 快捷添加吃饭 Sheet
+// MARK: - 快捷添加饮食 Sheet
 struct QuickAddMealSheet: View {
     @ObservedObject var mealRecordManager: MealRecordManager
     @Environment(\.dismiss) var dismiss
-    @State private var selectedMealType: MealType = .snack
-    @State private var selectedFoods: Set<String> = []
-    @AppStorage(FoodCatalogStore.key) private var foodCatalogData: Data = Data()
 
-    private var availableFoods: [String] {
-        FoodCatalogStore.load(from: foodCatalogData)
+    // Food list stored in AppStorage
+    @AppStorage("savedFoodList") private var savedFoodListData: Data = Data()
+    private var foodList: [String] {
+        (try? JSONDecoder().decode([String].self, from: savedFoodListData)) ?? []
     }
+
+    @State private var selectedType: MealType = .lunch
+    @State private var selectedFoods: [String] = []
+    @State private var amount: String = ""
+    @State private var notes: String = ""
+    @State private var date = Date()
 
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                VStack(spacing: AppSpacing.xl) {
+                    // 餐次选择
                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("选择餐次")
+                        Text("餐次")
                             .font(AppTypography.calloutMedium)
                             .foregroundColor(AppColors.textSecondary)
 
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: AppSpacing.sm) {
-                            ForEach(MealType.allCases, id: \.self) { type in
-                                QuickMealTypeButton(
-                                    type: type,
-                                    isSelected: selectedMealType == type,
-                                    action: { selectedMealType = type }
-                                )
-                            }
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("常用食物")
-                            .font(AppTypography.calloutMedium)
-                            .foregroundColor(AppColors.textSecondary)
-
-                        FlowLayout(spacing: AppSpacing.xs) {
-                            ForEach(availableFoods, id: \.self) { food in
-                                FoodChipView(
-                                    food: food,
-                                    isSelected: selectedFoods.contains(food),
-                                    action: {
-                                        if selectedFoods.contains(food) {
-                                            selectedFoods.remove(food)
-                                        } else {
-                                            selectedFoods.insert(food)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: AppSpacing.xs) {
+                                ForEach(MealType.allCases, id: \.self) { type in
+                                    Button(action: {
+                                        HapticManager.selection()
+                                        withAnimation(AppAnimation.springBouncy) {
+                                            selectedType = type
                                         }
+                                    }) {
+                                        VStack(spacing: AppSpacing.xxs) {
+                                            Image(systemName: type.icon)
+                                                .font(.system(size: 18, weight: .light))
+                                            Text(type.rawValue)
+                                                .font(AppTypography.caption)
+                                        }
+                                        .foregroundColor(selectedType == type ? .white : AppColors.textSecondary)
+                                        .padding(.horizontal, AppSpacing.md)
+                                        .padding(.vertical, AppSpacing.sm)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: AppRadius.md)
+                                                .fill(selectedType == type ? AppColors.meal : AppColors.surfaceSecondary)
+                                        )
+                                        .scaleEffect(selectedType == type ? 1.05 : 1.0)
                                     }
-                                )
+                                }
                             }
                         }
                     }
 
-                    Button(action: saveMeal) {
+                    // 食材选择
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        Text("食材")
+                            .font(AppTypography.calloutMedium)
+                            .foregroundColor(AppColors.textSecondary)
+
+                        if foodList.isEmpty {
+                            Text("暂无食材，请先在食谱中添加")
+                                .font(AppTypography.footnote)
+                                .foregroundColor(AppColors.textTertiary)
+                        } else {
+                            FlowLayout(spacing: AppSpacing.xs) {
+                                ForEach(foodList, id: \.self) { food in
+                                    let isSelected = selectedFoods.contains(food)
+                                    Button(action: {
+                                        if isSelected {
+                                            selectedFoods.removeAll { $0 == food }
+                                        } else {
+                                            selectedFoods.append(food)
+                                        }
+                                    }) {
+                                        Text(food)
+                                            .font(AppTypography.footnoteMedium)
+                                            .foregroundColor(isSelected ? .white : AppColors.textPrimary)
+                                            .padding(.horizontal, AppSpacing.sm)
+                                            .padding(.vertical, AppSpacing.xs)
+                                            .background(
+                                                Capsule()
+                                                    .fill(isSelected ? AppColors.meal : AppColors.surfaceSecondary)
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 食量 & 备注
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        Text("详情")
+                            .font(AppTypography.calloutMedium)
+                            .foregroundColor(AppColors.textSecondary)
+
+                        TextField("食量（如：一碗、50ml）", text: $amount)
+                            .font(AppTypography.body)
+                            .padding(AppSpacing.sm)
+                            .background(AppColors.surfaceSecondary)
+                            .cornerRadius(AppRadius.md)
+
+                        TextField("备注（可选）", text: $notes)
+                            .font(AppTypography.body)
+                            .padding(AppSpacing.sm)
+                            .background(AppColors.surfaceSecondary)
+                            .cornerRadius(AppRadius.md)
+                    }
+
+                    // 时间
+                    DatePicker("时间", selection: $date, in: ...Date())
+                        .font(AppTypography.body)
+
+                    // 保存按钮
+                    Button(action: save) {
                         Text("保存")
                     }
                     .buttonStyle(PrimaryButtonStyle(color: AppColors.meal))
-                    .padding(.top, AppSpacing.lg)
+                    .disabled(selectedFoods.isEmpty && amount.isEmpty)
                 }
                 .padding(AppSpacing.lg)
             }
             .background(AppColors.background)
-            .navigationTitle("添加饮食记录")
+            .navigationTitle("添加饮食")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("取消") { dismiss() }
+                        .foregroundColor(AppColors.textSecondary)
                 }
             }
         }
+        .presentationDetents([.large])
     }
 
-    private func saveMeal() {
-        let newRecord = MealRecord(
-            date: Date(),
-            mealType: selectedMealType,
-            foodItems: Array(selectedFoods),
-            amount: "",
-            notes: ""
+    private func save() {
+        let record = MealRecord(
+            date: date,
+            mealType: selectedType,
+            foodItems: selectedFoods,
+            amount: amount,
+            notes: notes
         )
-        mealRecordManager.addMealRecord(newRecord)
+        mealRecordManager.addMealRecord(record)
         dismiss()
-    }
-}
-
-// MARK: - 餐次选择按钮
-struct QuickMealTypeButton: View {
-    let type: MealType
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: AppSpacing.xs) {
-                Image(systemName: type.icon)
-                    .font(.system(size: 20))
-                Text(type.rawValue)
-                    .font(AppTypography.caption)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, AppSpacing.sm)
-            .foregroundColor(isSelected ? .white : AppColors.textPrimary)
-            .background(
-                RoundedRectangle(cornerRadius: AppRadius.md)
-                    .fill(isSelected ? AppColors.meal : AppColors.surface)
-            )
-        }
-    }
-}
-
-// MARK: - 食物选择 Chip
-struct FoodChipView: View {
-    let food: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(food)
-                .font(AppTypography.footnote)
-                .foregroundColor(isSelected ? .white : AppColors.textPrimary)
-                .padding(.horizontal, AppSpacing.sm)
-                .padding(.vertical, AppSpacing.xs)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? AppColors.meal : AppColors.surfaceSecondary)
-                )
-        }
     }
 }
 
@@ -569,45 +483,140 @@ struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(in: proposal.width ?? 0, subviews: subviews, spacing: spacing)
+        let result = computeLayout(proposal: proposal, subviews: subviews)
         return result.size
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = FlowResult(in: bounds.width, subviews: subviews, spacing: spacing)
+        let result = computeLayout(proposal: proposal, subviews: subviews)
         for (index, subview) in subviews.enumerated() {
-            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x,
-                                       y: bounds.minY + result.positions[index].y),
-                          proposal: .unspecified)
+            let point = result.positions[index]
+            subview.place(at: CGPoint(x: bounds.minX + point.x, y: bounds.minY + point.y), proposal: .unspecified)
         }
     }
 
-    struct FlowResult {
-        var size: CGSize = .zero
+    private func computeLayout(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
         var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        let maxWidth = proposal.width ?? .infinity
 
-        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
-            var x: CGFloat = 0
-            var y: CGFloat = 0
-            var rowHeight: CGFloat = 0
-
-            for subview in subviews {
-                let size = subview.sizeThatFits(.unspecified)
-
-                if x + size.width > maxWidth && x > 0 {
-                    x = 0
-                    y += rowHeight + spacing
-                    rowHeight = 0
-                }
-
-                positions.append(CGPoint(x: x, y: y))
-                rowHeight = max(rowHeight, size.height)
-                x += size.width + spacing
-
-                self.size.width = max(self.size.width, x)
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth && currentX > 0 {
+                currentX = 0
+                currentY += rowHeight + spacing
+                rowHeight = 0
             }
-
-            self.size.height = y + rowHeight
+            positions.append(CGPoint(x: currentX, y: currentY))
+            rowHeight = max(rowHeight, size.height)
+            currentX += size.width + spacing
         }
+
+        return (size: CGSize(width: maxWidth, height: currentY + rowHeight), positions: positions)
+    }
+}
+
+// MARK: - 食物清单视图
+struct FoodListView: View {
+    @ObservedObject var mealRecordManager: MealRecordManager
+    @Environment(\.dismiss) var dismiss
+    @State private var newFoodName = ""
+    @AppStorage("savedFoodList") private var savedFoodListData: Data = Data()
+    @AppStorage("foodListInitialized") private var foodListInitialized: Bool = false
+    
+    private static let defaultFoods = [
+        "米粥", "面条", "馒头", "面包", "燕麦",
+        "鸡蛋", "豆腐", "鸡肉", "鱼肉",
+        "香蕉", "苹果", "牛油果", "蓝莓",
+        "红薯", "胡萝卜", "西兰花", "南瓜", "土豆",
+        "母乳", "配方奶", "酸奶"
+    ]
+    
+    private var foodList: [String] {
+        (try? JSONDecoder().decode([String].self, from: savedFoodListData)) ?? []
+    }
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                AppColors.background
+                    .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    // 添加区域
+                    HStack(spacing: AppSpacing.sm) {
+                        TextField("添加食材名称", text: $newFoodName)
+                            .font(AppTypography.body)
+                            .padding(AppSpacing.sm)
+                            .background(AppColors.surfaceSecondary)
+                            .cornerRadius(AppRadius.md)
+
+                        Button(action: addFood) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(newFoodName.isEmpty ? AppColors.textTertiary : AppColors.meal)
+                        }
+                        .disabled(newFoodName.isEmpty)
+                    }
+                    .padding(AppSpacing.lg)
+
+                    Divider()
+                        .foregroundColor(AppColors.divider)
+
+                    if foodList.isEmpty {
+                        EmptyStateView(
+                            icon: "carrot",
+                            title: "暂无食材",
+                            subtitle: "在上方输入框添加常用食材"
+                        )
+                    } else {
+                        List {
+                            ForEach(foodList, id: \.self) { food in
+                                Text(food)
+                                    .font(AppTypography.body)
+                                    .foregroundColor(AppColors.textPrimary)
+                                    .listRowBackground(AppColors.surface)
+                            }
+                            .onDelete { offsets in
+                                removeFoodItems(at: offsets)
+                            }
+                        }
+                        .listStyle(.plain)
+                    }
+                }
+            }
+            .navigationTitle("妈妈食谱")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("完成") { dismiss() }
+                        .foregroundColor(AppColors.primary)
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .onAppear {
+            if !foodListInitialized && foodList.isEmpty {
+                savedFoodListData = (try? JSONEncoder().encode(Self.defaultFoods)) ?? Data()
+                foodListInitialized = true
+            }
+        }
+    }
+
+    private func addFood() {
+        let name = newFoodName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        var list = foodList
+        list.append(name)
+        savedFoodListData = (try? JSONEncoder().encode(list)) ?? Data()
+        newFoodName = ""
+    }
+
+    private func removeFoodItems(at offsets: IndexSet) {
+        var list = foodList
+        list.remove(atOffsets: offsets)
+        savedFoodListData = (try? JSONEncoder().encode(list)) ?? Data()
     }
 }

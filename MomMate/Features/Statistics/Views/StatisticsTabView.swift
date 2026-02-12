@@ -2,28 +2,108 @@
 //  StatisticsTabView.swift
 //  MomMate
 //
-//  Statistics tab view and related components
-//  Extracted from MainTabView.swift for single responsibility
+//  Statistics tab — 现代极简风格
 //
 
 import SwiftUI
 import Charts
 
-// MARK: - Insight card data model (replaces unnamed tuple)
-struct InsightCard {
-    let title: String
-    let value: String
-    let subtitle: String
+// MARK: - 时间范围
+enum StatsRange: String, CaseIterable {
+    case week = "周"
+    case month = "月"
+    case year = "年"
+
+    var strideUnit: Calendar.Component {
+        switch self {
+        case .week: return .day
+        case .month: return .day
+        case .year: return .month
+        }
+    }
+
+    var dateFormat: Date.FormatStyle {
+        switch self {
+        case .week:  return .dateTime.day()
+        case .month: return .dateTime.day()
+        case .year:  return .dateTime.month(.abbreviated)
+        }
+    }
+
+    /// 指定 anchor date 所对应的区间 [start, end)
+    func dateRange(for anchor: Date) -> (start: Date, end: Date) {
+        let cal = Calendar.current
+        switch self {
+        case .week:
+            // 周一 ~ 周日
+            let weekday = cal.component(.weekday, from: anchor)
+            let daysToMonday = (weekday == 1) ? -6 : (2 - weekday)
+            let monday = cal.date(byAdding: .day, value: daysToMonday, to: cal.startOfDay(for: anchor))!
+            let nextMonday = cal.date(byAdding: .day, value: 7, to: monday)!
+            return (monday, nextMonday)
+        case .month:
+            let comps = cal.dateComponents([.year, .month], from: anchor)
+            let start = cal.date(from: comps)!
+            let end = cal.date(byAdding: .month, value: 1, to: start)!
+            return (start, end)
+        case .year:
+            let comps = cal.dateComponents([.year], from: anchor)
+            let start = cal.date(from: comps)!
+            let end = cal.date(byAdding: .year, value: 1, to: start)!
+            return (start, end)
+        }
+    }
+
+    /// 向前/后翻一个周期
+    func shift(_ anchor: Date, by delta: Int) -> Date {
+        let cal = Calendar.current
+        switch self {
+        case .week:  return cal.date(byAdding: .weekOfYear, value: delta, to: anchor)!
+        case .month: return cal.date(byAdding: .month, value: delta, to: anchor)!
+        case .year:  return cal.date(byAdding: .year, value: delta, to: anchor)!
+        }
+    }
+
+    /// 显示文本
+    func label(for anchor: Date) -> String {
+        let (start, end) = dateRange(for: anchor)
+        let cal = Calendar.current
+        switch self {
+        case .week:
+            let lastDay = cal.date(byAdding: .day, value: -1, to: end)!
+            let fmt = DateFormatter()
+            fmt.locale = Locale(identifier: "zh_CN")
+            fmt.dateFormat = "M月d日"
+            return "\(fmt.string(from: start)) ~ \(fmt.string(from: lastDay))"
+        case .month:
+            let fmt = DateFormatter()
+            fmt.locale = Locale(identifier: "zh_CN")
+            fmt.dateFormat = "yyyy年M月"
+            return fmt.string(from: start)
+        case .year:
+            let fmt = DateFormatter()
+            fmt.locale = Locale(identifier: "zh_CN")
+            fmt.dateFormat = "yyyy年"
+            return fmt.string(from: start)
+        }
+    }
+
+    /// 区间天数（用于平均值计算）
+    func daysCount(for anchor: Date) -> Int {
+        let (start, end) = dateRange(for: anchor)
+        return Calendar.current.dateComponents([.day], from: start, to: end).day ?? 1
+    }
 }
 
-// MARK: - 统计 Tab 主视图
 struct StatisticsTabView: View {
     @ObservedObject var recordManager: SleepRecordManager
     @ObservedObject var mealRecordManager: MealRecordManager
-    @State private var statisticsMode: StatisticsMode = .sleep
+    @State private var selectedMode: StatsMode = .sleep
+    @State private var selectedRange: StatsRange = .week
+    @State private var anchorDate: Date = Date()
     @AppStorage(StorageKeys.fontSizeFactor) private var fontSizeFactor: Double = 1.0
 
-    enum StatisticsMode: String, CaseIterable {
+    enum StatsMode: String, CaseIterable {
         case sleep = "睡眠"
         case meal = "饮食"
     }
@@ -35,386 +115,487 @@ struct StatisticsTabView: View {
                     .ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: AppSpacing.xl) {
-                        CustomSegmentedControl(selection: $statisticsMode)
-                            .padding(.horizontal, AppSpacing.lg)
-                            .padding(.top, AppSpacing.md)
+                    VStack(spacing: AppSpacing.md) {
+                        // 分段控制（睡眠/饮食）+ 时间控制合并
+                        StatsSegmentControl(selectedMode: $selectedMode)
 
-                        InsightOverviewRow(
-                            mode: statisticsMode,
+                        // 时间范围 + 导航合为一行
+                        StatsTimeControl(
+                            selectedRange: $selectedRange,
+                            anchorDate: $anchorDate
+                        )
+
+                        // 概览数据
+                        StatsOverviewRow(
+                            mode: selectedMode,
+                            range: selectedRange,
+                            anchorDate: anchorDate,
                             sleepRecords: recordManager.completedRecords,
                             mealRecords: mealRecordManager.mealRecords
                         )
-                        .padding(.horizontal, AppSpacing.lg)
 
-                        if statisticsMode == .sleep {
-                            SleepPreviewStats(recordManager: recordManager)
+                        // 详细图表
+                        if selectedMode == .sleep {
+                            SleepStatsContent(
+                                records: recordManager.completedRecords,
+                                range: selectedRange,
+                                anchorDate: anchorDate
+                            )
                         } else {
-                            MealStatisticsView(records: mealRecordManager.mealRecords)
+                            MealStatsContent(
+                                records: mealRecordManager.mealRecords,
+                                range: selectedRange,
+                                anchorDate: anchorDate
+                            )
                         }
                     }
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.top, AppSpacing.xs)
                     .padding(.bottom, AppSpacing.xxl)
                 }
             }
-            .navigationTitle("统计分析")
+            .navigationTitle("统计")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("统计分析")
-                        .font(AppTypography.title3)
-                        .foregroundColor(AppColors.textPrimary)
-                }
-            }
             .id(fontSizeFactor)
         }
     }
 }
 
-// MARK: - 概览数据行
-struct InsightOverviewRow: View {
-    let mode: StatisticsTabView.StatisticsMode
-    let sleepRecords: [SleepRecord]
-    let mealRecords: [MealRecord]
-
-    private var cards: [InsightCard] {
-        if mode == .sleep {
-            let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
-            let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
-            let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
-
-            let todayDuration = sleepRecords.filter { record in
-                guard let wakeTime = record.wakeTime else { return false }
-                return wakeTime >= today && wakeTime < tomorrow
-            }.compactMap(\.duration).reduce(0, +)
-
-            let yesterdayDuration = sleepRecords.filter { record in
-                guard let wakeTime = record.wakeTime else { return false }
-                return wakeTime >= yesterday && wakeTime < today
-            }.compactMap(\.duration).reduce(0, +)
-
-            let delta = (todayDuration - yesterdayDuration) / 3600
-            let trend = delta == 0 ? "持平" : (delta > 0 ? "+\(Int(delta))h" : "\(Int(delta))h")
-
-            return [
-                InsightCard(title: "今日睡眠", value: formatDuration(todayDuration), subtitle: "醒来记录汇总"),
-                InsightCard(title: "昨日对比", value: trend, subtitle: "以睡醒当日归属"),
-                InsightCard(title: "记录次数", value: "\(sleepRecords.count)", subtitle: "累计有效睡眠")
-            ]
-        }
-
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
-
-        let todayMeals = mealRecords.filter { $0.date >= today && $0.date < tomorrow }
-        let average = Double(mealRecords.count) / 7.0
-        let topType = MealType.allCases
-            .map { type in (type.rawValue, mealRecords.filter { $0.mealType == type }.count) }
-            .max(by: { $0.1 < $1.1 })?.0 ?? "暂无"
-
-        return [
-            InsightCard(title: "今日饮食", value: "\(todayMeals.count) 次", subtitle: "自然日统计"),
-            InsightCard(title: "近7日均值", value: String(format: "%.1f 次/天", average), subtitle: "粗粒度趋势"),
-            InsightCard(title: "最高类型", value: topType, subtitle: "累计出现最多")
-        ]
-    }
-
-    var body: some View {
-        HStack(spacing: AppSpacing.sm) {
-            ForEach(Array(cards.enumerated()), id: \.offset) { _, item in
-                VStack(alignment: .leading, spacing: AppSpacing.xxs) {
-                    Text(item.title)
-                        .font(AppTypography.captionMedium)
-                        .foregroundColor(AppColors.textSecondary)
-                    Text(item.value)
-                        .font(AppTypography.title3)
-                        .foregroundColor(AppColors.textPrimary)
-                    Text(item.subtitle)
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.textTertiary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(AppSpacing.sm)
-                .background(AppColors.surface)
-                .cornerRadius(AppRadius.md)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppRadius.md)
-                        .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
-                )
-            }
-        }
-    }
-
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let hours = Int(duration) / 3600
-        let minutes = (Int(duration) % 3600) / 60
-        if hours > 0 {
-            return "\(hours)h\(minutes)m"
-        }
-        return "\(minutes)m"
-    }
-}
-
-// MARK: - 自定义分段选择器
-struct CustomSegmentedControl<T: RawRepresentable & CaseIterable>: View where T.RawValue == String, T: Hashable {
-    @Binding var selection: T
+// MARK: - 分段控制 — 紧凑下划线
+struct StatsSegmentControl: View {
+    @Binding var selectedMode: StatisticsTabView.StatsMode
+    @Namespace private var animation
 
     var body: some View {
         HStack(spacing: 0) {
-            ForEach(Array(T.allCases), id: \.self) { item in
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        selection = item
+            ForEach(StatisticsTabView.StatsMode.allCases, id: \.self) { mode in
+                VStack(spacing: 4) {
+                    Text(mode.rawValue)
+                        .font(selectedMode == mode ? AppTypography.bodyMedium : AppTypography.body)
+                        .foregroundColor(selectedMode == mode ? AppColors.textPrimary : AppColors.textTertiary)
+
+                    if selectedMode == mode {
+                        Capsule()
+                            .fill(AppColors.primary)
+                            .frame(width: 24, height: 2)
+                            .matchedGeometryEffect(id: "indicator", in: animation)
+                    } else {
+                        Capsule()
+                            .fill(Color.clear)
+                            .frame(width: 24, height: 2)
                     }
-                }) {
-                    Text(item.rawValue)
-                        .font(AppTypography.subheadMedium)
-                        .foregroundColor(selection == item ? .white : AppColors.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, AppSpacing.sm)
-                        .background(
-                            RoundedRectangle(cornerRadius: AppRadius.sm)
-                                .fill(selection == item ? AppColors.primary : Color.clear)
-                        )
+                }
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    HapticManager.selection()
+                    withAnimation(AppAnimation.springSnappy) {
+                        selectedMode = mode
+                    }
                 }
             }
         }
-        .padding(AppSpacing.xxs)
+    }
+}
+
+// MARK: - 时间控制（范围选择 + 翻页导航合一）
+struct StatsTimeControl: View {
+    @Binding var selectedRange: StatsRange
+    @Binding var anchorDate: Date
+
+    private var isCurrentPeriod: Bool {
+        let (start, _) = selectedRange.dateRange(for: Date())
+        let (aStart, _) = selectedRange.dateRange(for: anchorDate)
+        return start == aStart
+    }
+
+    var body: some View {
+        VStack(spacing: AppSpacing.sm) {
+            // 周 / 月 / 年 分段控制
+            HStack(spacing: 0) {
+                ForEach(StatsRange.allCases, id: \.self) { range in
+                    Button {
+                        HapticManager.selection()
+                        withAnimation(AppAnimation.springSnappy) {
+                            selectedRange = range
+                            anchorDate = Date()
+                        }
+                    } label: {
+                        Text(range.rawValue)
+                            .font(.system(size: 14, weight: selectedRange == range ? .semibold : .medium))
+                            .foregroundColor(selectedRange == range ? AppColors.textPrimary : AppColors.textTertiary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                selectedRange == range
+                                    ? RoundedRectangle(cornerRadius: 8).fill(AppColors.surface)
+                                        .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
+                                    : nil
+                            )
+                    }
+                }
+            }
+            .padding(3)
+            .background(AppColors.surfaceSecondary)
+            .cornerRadius(10)
+
+            // < 日期范围 > 导航
+            HStack(spacing: AppSpacing.sm) {
+                Button {
+                    HapticManager.light()
+                    withAnimation(AppAnimation.springSnappy) {
+                        anchorDate = selectedRange.shift(anchorDate, by: -1)
+                    }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(AppColors.textSecondary)
+                        .frame(width: 28, height: 28)
+                }
+
+                Text(selectedRange.label(for: anchorDate))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(AppColors.textPrimary)
+
+                Button {
+                    HapticManager.light()
+                    withAnimation(AppAnimation.springSnappy) {
+                        anchorDate = selectedRange.shift(anchorDate, by: 1)
+                    }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(isCurrentPeriod ? AppColors.textTertiary.opacity(0.3) : AppColors.textSecondary)
+                        .frame(width: 28, height: 28)
+                }
+                .disabled(isCurrentPeriod)
+            }
+        }
+    }
+}
+
+// MARK: - 概览数据行
+struct StatsOverviewRow: View {
+    let mode: StatisticsTabView.StatsMode
+    let range: StatsRange
+    let anchorDate: Date
+    let sleepRecords: [SleepRecord]
+    let mealRecords: [MealRecord]
+
+    private var dateRange: (start: Date, end: Date) {
+        range.dateRange(for: anchorDate)
+    }
+
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            if mode == .sleep {
+                OverviewMetric(title: "平均睡眠", value: averageSleepDuration, unit: "", color: AppColors.sleep)
+                OverviewMetric(title: "总计", value: totalSleepHours, unit: "", color: AppColors.sleep)
+                OverviewMetric(title: "平均次数", value: averageSleepCount, unit: "次/天", color: AppColors.sleep)
+            } else {
+                OverviewMetric(title: "总次数", value: "\(totalMealCount)", unit: "次", color: AppColors.meal)
+                OverviewMetric(title: "日均", value: String(format: "%.1f", averageDailyMeals), unit: "次/天", color: AppColors.meal)
+                OverviewMetric(title: "主要类型", value: topMealType, unit: "", color: AppColors.meal)
+            }
+        }
+    }
+
+    private var rangeRecords: [SleepRecord] {
+        let (start, end) = dateRange
+        return sleepRecords.filter { ($0.wakeTime ?? $0.sleepTime) >= start && ($0.wakeTime ?? $0.sleepTime) < end }
+    }
+
+    private var rangeMealRecords: [MealRecord] {
+        let (start, end) = dateRange
+        return mealRecords.filter { $0.date >= start && $0.date < end }
+    }
+
+    private var days: Int { range.daysCount(for: anchorDate) }
+
+    private var averageSleepDuration: String {
+        let recs = rangeRecords
+        guard !recs.isEmpty else { return "0时" }
+        let total = recs.compactMap(\.duration).reduce(0, +)
+        let avg = total / Double(days)
+        let hours = Int(avg) / 3600
+        let minutes = (Int(avg) % 3600) / 60
+        return "\(hours)时 \(minutes)分"
+    }
+
+    private var totalSleepHours: String {
+        let total = rangeRecords.compactMap(\.duration).reduce(0, +)
+        return "\(Int(total) / 3600)时"
+    }
+
+    private var averageSleepCount: String {
+        String(format: "%.1f", Double(rangeRecords.count) / Double(days))
+    }
+
+    private var totalMealCount: Int { rangeMealRecords.count }
+
+    private var averageDailyMeals: Double {
+        Double(rangeMealRecords.count) / Double(days)
+    }
+
+    private var topMealType: String {
+        let filtered = rangeMealRecords
+        guard !filtered.isEmpty else { return "无" }
+        let counts = MealType.allCases.map { type in
+            (type: type, count: filtered.filter { $0.mealType == type }.count)
+        }
+        return counts.max(by: { $0.count < $1.count })?.type.rawValue ?? "无"
+    }
+}
+
+struct OverviewMetric: View {
+    let title: String
+    let value: String
+    let unit: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 1)
+                .fill(color)
+                .frame(width: 2)
+                .padding(.vertical, AppSpacing.sm)
+
+            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                Text(title)
+                    .font(AppTypography.caption)
+                    .foregroundColor(AppColors.textTertiary)
+
+                HStack(alignment: .lastTextBaseline, spacing: 2) {
+                    Text(value)
+                        .font(AppTypography.title3)
+                        .foregroundColor(AppColors.textPrimary)
+
+                    if !unit.isEmpty {
+                        Text(unit)
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                    }
+                }
+            }
+            .padding(.leading, AppSpacing.sm)
+            .padding(.vertical, AppSpacing.sm)
+            .padding(.trailing, AppSpacing.md)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.surface)
-        .cornerRadius(AppRadius.md)
+        .cornerRadius(AppRadius.lg)
         .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.md)
-                .stroke(Color(hex: "E5E7EB"), lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppRadius.lg)
+                .stroke(AppColors.border.opacity(0.3), lineWidth: 0.5)
         )
     }
 }
 
-// MARK: - 睡眠统计内联展示
-struct SleepPreviewStats: View {
-    @ObservedObject var recordManager: SleepRecordManager
-    @State private var selectedPeriod: PeriodType = .week
-
-    enum PeriodType: String, CaseIterable {
-        case day = "今日"
-        case week = "本周"
-        case month = "本月"
-    }
-
-    private var statistics: [SleepStatistics] {
-        let completedRecords = recordManager.completedRecords
-        switch selectedPeriod {
-        case .day:
-            return SleepStatisticsManager.shared.dailyStatistics(from: completedRecords)
-        case .week:
-            return SleepStatisticsManager.shared.weeklyStatistics(from: completedRecords)
-        case .month:
-            return SleepStatisticsManager.shared.monthlyStatistics(from: completedRecords)
-        }
-    }
-
-    private var averageDuration: TimeInterval {
-        let total = statistics.reduce(0) { $0 + $1.averageDuration }
-        return statistics.isEmpty ? 0 : total / Double(statistics.count)
-    }
-
-    private var totalCount: Int {
-        statistics.reduce(0) { $0 + $1.sleepCount }
-    }
+// MARK: - 通用趋势图表
+struct TrendChart: View {
+    let data: [(date: Date, value: Double)]
+    let range: StatsRange
+    let color: Color
+    let yLabel: String
 
     var body: some View {
-        VStack(spacing: AppSpacing.md) {
-            Picker("周期", selection: $selectedPeriod) {
-                ForEach(PeriodType.allCases, id: \.self) { period in
-                    Text(period.rawValue).tag(period)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, AppSpacing.md)
-
-            VStack(spacing: AppSpacing.md) {
-                HStack(spacing: AppSpacing.md) {
-                    VStack(spacing: AppSpacing.xs) {
-                        Text(formatDuration(averageDuration))
-                            .font(AppTypography.displaySmall)
-                            .foregroundColor(AppColors.sleep)
-                        Text("平均时长")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity)
-
-                    Divider()
-                        .frame(height: 40)
-
-                    VStack(spacing: AppSpacing.xs) {
-                        Text("\(totalCount)")
-                            .font(AppTypography.displaySmall)
-                            .foregroundColor(AppColors.primary)
-                        Text("睡眠次数")
-                            .font(AppTypography.caption)
-                            .foregroundColor(AppColors.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-            .glassCard()
-            .padding(.horizontal, AppSpacing.md)
-
-            if !statistics.isEmpty {
-                VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    Text("睡眠趋势")
-                        .font(AppTypography.title3)
-                        .foregroundColor(AppColors.textPrimary)
-                        .padding(.horizontal, AppSpacing.md)
-
-                    GeometryReader { geometry in
-                        let data = SleepStatisticsManager.shared.chartData(from: statistics)
-                        let barWidth = max((geometry.size.width - CGFloat(data.count - 1) * 8) / CGFloat(max(data.count, 1)), 10)
-                        let maxValue = max(data.map { $0.value }.max() ?? 1, 1)
-                        let maxHeight = geometry.size.height - 30
-
-                        HStack(alignment: .bottom, spacing: 8) {
-                            ForEach(data) { point in
-                                VStack(spacing: AppSpacing.xxs) {
-                                    RoundedRectangle(cornerRadius: AppRadius.sm)
-                                        .fill(AppColors.sleepGradient)
-                                        .frame(
-                                            width: barWidth,
-                                            height: max(CGFloat(point.value / maxValue) * maxHeight, 4)
-                                        )
-
-                                    Text(point.label)
-                                        .font(AppTypography.caption)
-                                        .foregroundColor(AppColors.textTertiary)
-                                        .frame(width: barWidth)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.5)
-                                }
-                            }
-                        }
-                    }
-                    .frame(height: 132)
-                    .padding(.horizontal, AppSpacing.md)
-                }
-                .glassCard(padding: AppSpacing.sm)
-                .padding(.horizontal, AppSpacing.md)
+        Chart {
+            ForEach(data, id: \.date) { item in
+                BarMark(
+                    x: .value("日期", item.date, unit: range.strideUnit),
+                    y: .value(yLabel, item.value)
+                )
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [color.opacity(0.25), color.opacity(0.65)],
+                        startPoint: .bottom,
+                        endPoint: .top
+                    )
+                )
+                .cornerRadius(range == .year ? AppRadius.sm : AppRadius.xs)
             }
         }
-    }
-
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let hours = Int(duration) / 3600
-        let minutes = (Int(duration) % 3600) / 60
-        if hours > 0 {
-            return "\(hours)h\(minutes)m"
-        } else {
-            return "\(minutes)m"
+        .frame(height: 200)
+        .chartXAxis {
+            switch range {
+            case .week:
+                AxisMarks(values: .stride(by: .day)) { _ in
+                    AxisValueLabel(format: .dateTime.day())
+                }
+            case .month:
+                // 每 5 天显示一个标签，避免重叠
+                AxisMarks(values: .stride(by: .day, count: 5)) { _ in
+                    AxisValueLabel(format: .dateTime.day())
+                }
+            case .year:
+                AxisMarks(values: .stride(by: .month, count: 2)) { _ in
+                    AxisValueLabel(format: .dateTime.month(.narrow))
+                }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading) { AxisValueLabel() }
         }
     }
 }
 
-// MARK: - 饮食统计视图
-struct MealStatisticsView: View {
-    let records: [MealRecord]
+// MARK: - 睡眠统计
+struct SleepStatsContent: View {
+    let records: [SleepRecord]
+    let range: StatsRange
+    let anchorDate: Date
 
-    var body: some View {
-        VStack(spacing: AppSpacing.lg) {
-            VStack(alignment: .leading, spacing: AppSpacing.md) {
-                Text("进食频率 (过去 7 天)")
-                    .font(AppTypography.title3)
-                    .foregroundColor(AppColors.textPrimary)
+    private var trendData: [(date: Date, value: Double)] {
+        let cal = Calendar.current
+        let (start, end) = range.dateRange(for: anchorDate)
 
-                Chart {
-                    ForEach(frequencyData, id: \.date) { item in
-                        BarMark(
-                            x: .value("日期", item.date, unit: .day),
-                            y: .value("次数", item.count)
-                        )
-                        .foregroundStyle(AppColors.meal)
-                        .cornerRadius(AppRadius.xs)
-                    }
+        if range == .year {
+            // 按月汇总 — 12 个月
+            return (0..<12).map { i in
+                let monthDate = cal.date(byAdding: .month, value: i, to: start)!
+                let monthRecords = records.filter { record in
+                    guard let wakeTime = record.wakeTime else { return false }
+                    return cal.isDate(wakeTime, equalTo: monthDate, toGranularity: .month)
                 }
-                .frame(height: 176)
-                .chartXAxis {
-                    AxisMarks(values: .stride(by: .day)) { _ in
-                        AxisValueLabel(format: .dateTime.month().day())
-                    }
+                let avgHours: Double
+                if monthRecords.isEmpty {
+                    avgHours = 0
+                } else {
+                    avgHours = monthRecords.compactMap(\.duration).reduce(0, +) / Double(monthRecords.count) / 3600
                 }
+                return (date: monthDate, value: avgHours)
             }
-            .glassCard()
-
-            VStack(alignment: .leading, spacing: AppSpacing.md) {
-                Text("进食类型分布")
-                    .font(AppTypography.title3)
-                    .foregroundColor(AppColors.textPrimary)
-
-                Chart {
-                    ForEach(typeDistribution, id: \.type) { item in
-                        SectorMark(
-                            angle: .value("次数", item.count),
-                            innerRadius: .ratio(0.6),
-                            angularInset: 2
-                        )
-                        .foregroundStyle(by: .value("类型", item.type))
-                        .cornerRadius(AppRadius.sm)
-                    }
+        } else {
+            let days = cal.dateComponents([.day], from: start, to: end).day ?? 1
+            return (0..<days).map { i in
+                let date = cal.date(byAdding: .day, value: i, to: start)!
+                let dayRecords = records.filter { record in
+                    guard let wakeTime = record.wakeTime else { return false }
+                    return cal.isDate(wakeTime, inSameDayAs: date)
                 }
-                .frame(height: 176)
-                .chartForegroundStyleScale(domain: MealType.allCases.map { $0.rawValue }, range: MealType.allCases.map { $0.color })
-            }
-            .glassCard()
-
-            HStack(spacing: AppSpacing.sm) {
-                StatsCard(
-                    title: "平均每日",
-                    value: String(format: "%.1f次", averageDailyCount),
-                    subtitle: "过去 7 天",
-                    icon: "clock.fill",
-                    accentColor: AppColors.meal,
-                    gradient: AppColors.mealGradient
-                )
-
-                StatsCard(
-                    title: "主要类型",
-                    value: topMealType?.rawValue ?? "无",
-                    subtitle: "出现频率最高",
-                    icon: "star.fill",
-                    accentColor: AppColors.awake,
-                    gradient: AppColors.awakeGradient
-                )
+                let totalHours = dayRecords.compactMap(\.duration).reduce(0, +) / 3600
+                return (date: date, value: totalHours)
             }
         }
-        .padding(.horizontal, AppSpacing.md)
     }
 
-    private var frequencyData: [(date: Date, count: Int)] {
-        let calendar = Calendar.current
-        let now = Date()
-        let last7Days = (0..<7).compactMap { calendar.date(byAdding: .day, value: -$0, to: now) }.reversed()
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            Text(chartTitle)
+                .font(AppTypography.calloutMedium)
+                .foregroundColor(AppColors.textSecondary)
 
-        return last7Days.map { date in
-            let count = records.filter { calendar.isDate($0.date, inSameDayAs: date) }.count
-            return (date: date, count: count)
+            TrendChart(
+                data: trendData,
+                range: range,
+                color: AppColors.sleep,
+                yLabel: "时长"
+            )
+        }
+        .glassCard()
+    }
+
+    private var chartTitle: String {
+        switch range {
+        case .week:  return "每日睡眠时长"
+        case .month: return "每日睡眠时长"
+        case .year:  return "月均睡眠时长"
+        }
+    }
+}
+
+// MARK: - 饮食统计
+struct MealStatsContent: View {
+    let records: [MealRecord]
+    let range: StatsRange
+    let anchorDate: Date
+    
+    private var dateRange: (start: Date, end: Date) {
+        range.dateRange(for: anchorDate)
+    }
+
+    private var trendData: [(date: Date, value: Double)] {
+        let cal = Calendar.current
+        let (start, end) = dateRange
+
+        if range == .year {
+            return (0..<12).map { i in
+                let monthDate = cal.date(byAdding: .month, value: i, to: start)!
+                let monthRecords = records.filter { record in
+                    cal.isDate(record.date, equalTo: monthDate, toGranularity: .month)
+                }
+                let daysInMonth = cal.range(of: .day, in: .month, for: monthDate)?.count ?? 30
+                return (date: monthDate, value: Double(monthRecords.count) / Double(daysInMonth))
+            }
+        } else {
+            let days = cal.dateComponents([.day], from: start, to: end).day ?? 1
+            return (0..<days).map { i in
+                let date = cal.date(byAdding: .day, value: i, to: start)!
+                let count = records.filter { cal.isDate($0.date, inSameDayAs: date) }.count
+                return (date: date, value: Double(count))
+            }
         }
     }
 
     private var typeDistribution: [(type: String, count: Int)] {
-        MealType.allCases.map { type in
-            let count = records.filter { $0.mealType == type }.count
-            return (type: type.rawValue, count: count)
+        let (start, end) = dateRange
+        let filtered = records.filter { $0.date >= start && $0.date < end }
+        return MealType.allCases.map { type in
+            (type: type.rawValue, count: filtered.filter { $0.mealType == type }.count)
         }.filter { $0.count > 0 }
     }
 
-    private var averageDailyCount: Double {
-        let counts = frequencyData.map { Double($0.count) }
-        return counts.reduce(0, +) / Double(max(1, counts.count))
+    var body: some View {
+        VStack(spacing: AppSpacing.xl) {
+            // 频率趋势
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                Text(chartTitle)
+                    .font(AppTypography.calloutMedium)
+                    .foregroundColor(AppColors.textSecondary)
+
+                TrendChart(
+                    data: trendData,
+                    range: range,
+                    color: AppColors.meal,
+                    yLabel: "次数"
+                )
+            }
+            .glassCard()
+
+            // 类型分布
+            if !typeDistribution.isEmpty {
+                VStack(alignment: .leading, spacing: AppSpacing.md) {
+                    Text("进食类型分布")
+                        .font(AppTypography.calloutMedium)
+                        .foregroundColor(AppColors.textSecondary)
+
+                    Chart {
+                        ForEach(typeDistribution, id: \.type) { item in
+                            SectorMark(
+                                angle: .value("次数", item.count),
+                                innerRadius: .ratio(0.65),
+                                angularInset: 2
+                            )
+                            .foregroundStyle(by: .value("类型", item.type))
+                            .cornerRadius(AppRadius.sm)
+                        }
+                    }
+                    .frame(height: 200)
+                    .chartForegroundStyleScale(
+                        domain: MealType.allCases.map { $0.rawValue },
+                        range: MealType.allCases.map { $0.color.opacity(0.7) }
+                    )
+                }
+                .glassCard()
+            }
+        }
     }
 
-    private var topMealType: MealType? {
-        let counts = MealType.allCases.map { type in
-            (type: type, count: records.filter { $0.mealType == type }.count)
+    private var chartTitle: String {
+        switch range {
+        case .week:  return "每日进食次数"
+        case .month: return "每日进食次数"
+        case .year:  return "月均进食次数"
         }
-        return counts.max(by: { $0.count < $1.count })?.type
     }
 }
