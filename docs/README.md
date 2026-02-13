@@ -9,3 +9,4 @@
 - `architecture/AUTH_SYNC_TECHNICAL_DESIGN.md`：账号与同步技术方案（游客可用、登录用于同步）
 - `architecture/DATA_STRUCTURE_OPTIMIZATION_TECHNICAL_DESIGN.md`：数据结构优化方案（索引/聚合/迁移）
 - `architecture/UI_UX_DIRECTION_02_EMOTIONAL_GROWTH.md`：UI/UX 改版方向（情感成长感）
+- `CHANGELOG.md`：变更日志（按 Added/Changed/Fixed/Removed/Docs 维护）
