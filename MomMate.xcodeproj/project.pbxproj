@@ -32,11 +32,14 @@
 		B12345678901234567890002 /* Features/Settings/Models/AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901234567890001 /* Features/Settings/Models/AuthManager.swift */; };
 		B12345678901234567890004 /* Features/Settings/Views/AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901234567890003 /* Features/Settings/Views/AuthView.swift */; };
 		B12345678901234567890006 /* Features/Sleep/Views/HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901234567890005 /* Features/Sleep/Views/HistoryView.swift */; };
+		C12345678901234567890001 /* Features/Sleep/Views/SleepTabComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12345678901234567890002 /* Features/Sleep/Views/SleepTabComponents.swift */; };
 		B12345678901234567890012 /* SleepRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901234567890011 /* SleepRecordTests.swift */; };
 		B12345678901234567890014 /* MealRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901234567890013 /* MealRecordTests.swift */; };
 		B12345678901234567890016 /* SleepStatisticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901234567890015 /* SleepStatisticsTests.swift */; };
 		B12345678901234567890018 /* MilestoneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901234567890017 /* MilestoneTests.swift */; };
 		B1234567890123456789001A /* CloudSyncStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12345678901234567890019 /* CloudSyncStoreTests.swift */; };
+		D12345678901234567890001 /* SleepTabComponentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12345678901234567890002 /* SleepTabComponentsTests.swift */; };
+		D12345678901234567890003 /* NotesManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12345678901234567890004 /* NotesManagerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -76,12 +79,15 @@
 		B12345678901234567890001 /* Features/Settings/Models/AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Settings/Models/AuthManager.swift; sourceTree = "<group>"; };
 		B12345678901234567890003 /* Features/Settings/Views/AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Settings/Views/AuthView.swift; sourceTree = "<group>"; };
 		B12345678901234567890005 /* Features/Sleep/Views/HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Sleep/Views/HistoryView.swift; sourceTree = "<group>"; };
+		C12345678901234567890002 /* Features/Sleep/Views/SleepTabComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Sleep/Views/SleepTabComponents.swift; sourceTree = "<group>"; };
 		B12345678901234567890007 /* MomMateTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MomMateTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B12345678901234567890011 /* SleepRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepRecordTests.swift; sourceTree = "<group>"; };
 		B12345678901234567890013 /* MealRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealRecordTests.swift; sourceTree = "<group>"; };
 		B12345678901234567890015 /* SleepStatisticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepStatisticsTests.swift; sourceTree = "<group>"; };
 		B12345678901234567890017 /* MilestoneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneTests.swift; sourceTree = "<group>"; };
 		B12345678901234567890019 /* CloudSyncStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncStoreTests.swift; sourceTree = "<group>"; };
+		D12345678901234567890002 /* SleepTabComponentsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepTabComponentsTests.swift; sourceTree = "<group>"; };
+		D12345678901234567890004 /* NotesManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesManagerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -137,6 +143,7 @@
 				B12345678901234567890001 /* Features/Settings/Models/AuthManager.swift */,
 				B12345678901234567890003 /* Features/Settings/Views/AuthView.swift */,
 				B12345678901234567890005 /* Features/Sleep/Views/HistoryView.swift */,
+				C12345678901234567890002 /* Features/Sleep/Views/SleepTabComponents.swift */,
 				A1234567890123456789013D /* Assets.xcassets */,
 				A1234567890123456789014F /* Preview Content */,
 			);
@@ -168,6 +175,8 @@
 				B12345678901234567890015 /* SleepStatisticsTests.swift */,
 				B12345678901234567890017 /* MilestoneTests.swift */,
 				B12345678901234567890019 /* CloudSyncStoreTests.swift */,
+				D12345678901234567890002 /* SleepTabComponentsTests.swift */,
+				D12345678901234567890004 /* NotesManagerTests.swift */,
 			);
 			path = MomMateTests;
 			sourceTree = "<group>";
@@ -286,6 +295,7 @@
 				B12345678901234567890002 /* Features/Settings/Models/AuthManager.swift in Sources */,
 				B12345678901234567890004 /* Features/Settings/Views/AuthView.swift in Sources */,
 				B12345678901234567890006 /* Features/Sleep/Views/HistoryView.swift in Sources */,
+				C12345678901234567890001 /* Features/Sleep/Views/SleepTabComponents.swift in Sources */,
 				A1234567890123456789012A /* App/MomMateApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -299,6 +309,8 @@
 				B12345678901234567890016 /* SleepStatisticsTests.swift in Sources */,
 				B12345678901234567890018 /* MilestoneTests.swift in Sources */,
 				B1234567890123456789001A /* CloudSyncStoreTests.swift in Sources */,
+				D12345678901234567890001 /* SleepTabComponentsTests.swift in Sources */,
+				D12345678901234567890003 /* NotesManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

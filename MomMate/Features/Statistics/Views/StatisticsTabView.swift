@@ -299,13 +299,13 @@ struct StatsOverviewRow: View {
     var body: some View {
         HStack(spacing: AppSpacing.md) {
             if mode == .sleep {
-                OverviewMetric(title: "平均睡眠", value: averageSleepDuration, unit: "", color: AppColors.sleep)
-                OverviewMetric(title: "总计", value: totalSleepHours, unit: "", color: AppColors.sleep)
-                OverviewMetric(title: "平均次数", value: averageSleepCount, unit: "次/天", color: AppColors.sleep)
+                OverviewMetric(title: "日均睡眠时长", value: averageSleepDuration, unit: "", color: AppColors.sleep)
+                OverviewMetric(title: "总睡眠时长", value: totalSleepHours, unit: "", color: AppColors.sleep)
+                OverviewMetric(title: "日均睡眠次数", value: averageSleepCount, unit: "次", color: AppColors.sleep)
             } else {
-                OverviewMetric(title: "总次数", value: "\(totalMealCount)", unit: "次", color: AppColors.meal)
-                OverviewMetric(title: "日均", value: String(format: "%.1f", averageDailyMeals), unit: "次/天", color: AppColors.meal)
-                OverviewMetric(title: "主要类型", value: topMealType, unit: "", color: AppColors.meal)
+                OverviewMetric(title: "总进食次数", value: "\(totalMealCount)", unit: "次", color: AppColors.meal)
+                OverviewMetric(title: "日均进食次数", value: String(format: "%.1f", averageDailyMeals), unit: "次/天", color: AppColors.meal)
+                OverviewMetric(title: "主要进食类型", value: topMealType, unit: "", color: AppColors.meal)
             }
         }
     }
@@ -463,9 +463,8 @@ struct SleepStatsContent: View {
                     ?? cal.date(byAdding: .day, value: 30, to: monthDate)
                     ?? monthDate
                 let summary = sleepManager.sleepRangeSummary(start: monthDate, end: monthEnd)
-                let avgHours = summary.count > 0
-                    ? summary.duration / Double(summary.count) / 3600
-                    : 0
+                let daysInMonth = max(1, cal.dateComponents([.day], from: monthDate, to: monthEnd).day ?? 1)
+                let avgHours = summary.duration / Double(daysInMonth) / 3600
                 return (date: monthDate, value: avgHours)
             }
         } else {
@@ -499,7 +498,7 @@ struct SleepStatsContent: View {
         switch range {
         case .week:  return "每日睡眠时长"
         case .month: return "每日睡眠时长"
-        case .year:  return "月均睡眠时长"
+        case .year:  return "月日均睡眠时长"
         }
     }
 }
