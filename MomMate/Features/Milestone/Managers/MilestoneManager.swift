@@ -61,6 +61,11 @@ class MilestoneManager: ObservableObject, CloudSyncObserver {
         milestoneCountByCategory.values.filter { $0 > 0 }.count
     }
 
+    func clearAllData() {
+        milestones = []
+        saveMilestones()
+    }
+
     // MARK: - Persistence (via CloudSyncStore)
 
     private func saveMilestones() {

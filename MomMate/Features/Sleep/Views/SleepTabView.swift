@@ -11,6 +11,7 @@ import SwiftUI
 struct SleepTabView: View {
     @ObservedObject var recordManager: SleepRecordManager
     @ObservedObject var notesManager: NotesManager
+    let onClearData: (DataClearOptions) -> Void
     @State private var currentTime = Date()
     @State private var showingHistory = false
     @State private var editingRecord: SleepRecord?
@@ -121,7 +122,7 @@ struct SleepTabView: View {
                     .presentationCornerRadius(AppRadius.xxl)
             }
             .sheet(isPresented: $showingSettings) {
-                SettingsView()
+                SettingsView(onClearData: onClearData)
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(AppRadius.xxl)
             }
