@@ -73,4 +73,39 @@ final class MealRecordTests: XCTestCase {
         XCTAssertEqual(decoded.waterAmountML, 180)
         XCTAssertEqual(decoded.amount, "180ml")
     }
+
+    func testDefaultPrimaryMealTypeByHour() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+        let baseComponents = DateComponents(year: 2026, month: 2, day: 14)
+
+        let morning = calendar.date(from: DateComponents(
+            calendar: calendar,
+            timeZone: calendar.timeZone,
+            year: baseComponents.year,
+            month: baseComponents.month,
+            day: baseComponents.day,
+            hour: 8
+        ))!
+        let noon = calendar.date(from: DateComponents(
+            calendar: calendar,
+            timeZone: calendar.timeZone,
+            year: baseComponents.year,
+            month: baseComponents.month,
+            day: baseComponents.day,
+            hour: 13
+        ))!
+        let evening = calendar.date(from: DateComponents(
+            calendar: calendar,
+            timeZone: calendar.timeZone,
+            year: baseComponents.year,
+            month: baseComponents.month,
+            day: baseComponents.day,
+            hour: 20
+        ))!
+
+        XCTAssertEqual(MealType.defaultPrimaryMealType(for: morning, calendar: calendar), .breakfast)
+        XCTAssertEqual(MealType.defaultPrimaryMealType(for: noon, calendar: calendar), .lunch)
+        XCTAssertEqual(MealType.defaultPrimaryMealType(for: evening, calendar: calendar), .dinner)
+    }
 }
