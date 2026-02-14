@@ -341,8 +341,25 @@ struct QuickAddMealSheet: View {
     @State private var selectedType: MealType = .lunch
     @State private var selectedFoodIDs: Set<UUID> = []
     @State private var amount: String = ""
+    @State private var waterAmountText: String = ""
     @State private var notes: String = ""
     @State private var date = Date()
+    
+    private var isWaterType: Bool {
+        selectedType == .water
+    }
+
+    private var waterAmountML: Int? {
+        Int(waterAmountText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private var canSave: Bool {
+        if isWaterType {
+            return (waterAmountML ?? 0) > 0
+        }
+
+        return !selectedFoodIDs.isEmpty || !amount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         NavigationView {
@@ -383,36 +400,51 @@ struct QuickAddMealSheet: View {
                         }
                     }
 
-                    // 食材选择
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("食材")
-                            .font(AppTypography.calloutMedium)
-                            .foregroundColor(AppColors.textSecondary)
+                    // 食材选择 / 喝水量
+                    if isWaterType {
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("喝水量")
+                                .font(AppTypography.calloutMedium)
+                                .foregroundColor(AppColors.textSecondary)
 
-                        if foodCatalogManager.activeItems.isEmpty {
-                            Text("暂无食材，请先在食谱中添加")
-                                .font(AppTypography.footnote)
-                                .foregroundColor(AppColors.textTertiary)
-                        } else {
-                            FlowLayout(spacing: AppSpacing.xs) {
-                                ForEach(foodCatalogManager.activeItems) { food in
-                                    let isSelected = selectedFoodIDs.contains(food.id)
-                                    Button(action: {
-                                        if isSelected {
-                                            selectedFoodIDs.remove(food.id)
-                                        } else {
-                                            selectedFoodIDs.insert(food.id)
+                            TextField("请输入毫升数（如：120）", text: $waterAmountText)
+                                .keyboardType(.numberPad)
+                                .font(AppTypography.body)
+                                .padding(AppSpacing.sm)
+                                .background(AppColors.surfaceSecondary)
+                                .cornerRadius(AppRadius.md)
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("食材")
+                                .font(AppTypography.calloutMedium)
+                                .foregroundColor(AppColors.textSecondary)
+
+                            if foodCatalogManager.activeItems.isEmpty {
+                                Text("暂无食材，请先在食谱中添加")
+                                    .font(AppTypography.footnote)
+                                    .foregroundColor(AppColors.textTertiary)
+                            } else {
+                                FlowLayout(spacing: AppSpacing.xs) {
+                                    ForEach(foodCatalogManager.activeItems) { food in
+                                        let isSelected = selectedFoodIDs.contains(food.id)
+                                        Button(action: {
+                                            if isSelected {
+                                                selectedFoodIDs.remove(food.id)
+                                            } else {
+                                                selectedFoodIDs.insert(food.id)
+                                            }
+                                        }) {
+                                            Text(food.name)
+                                                .font(AppTypography.footnoteMedium)
+                                                .foregroundColor(isSelected ? .white : AppColors.textPrimary)
+                                                .padding(.horizontal, AppSpacing.sm)
+                                                .padding(.vertical, AppSpacing.xs)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(isSelected ? AppColors.meal : AppColors.surfaceSecondary)
+                                                )
                                         }
-                                    }) {
-                                        Text(food.name)
-                                            .font(AppTypography.footnoteMedium)
-                                            .foregroundColor(isSelected ? .white : AppColors.textPrimary)
-                                            .padding(.horizontal, AppSpacing.sm)
-                                            .padding(.vertical, AppSpacing.xs)
-                                            .background(
-                                                Capsule()
-                                                    .fill(isSelected ? AppColors.meal : AppColors.surfaceSecondary)
-                                            )
                                     }
                                 }
                             }
@@ -425,11 +457,13 @@ struct QuickAddMealSheet: View {
                             .font(AppTypography.calloutMedium)
                             .foregroundColor(AppColors.textSecondary)
 
-                        TextField("食量（如：一碗、50ml）", text: $amount)
-                            .font(AppTypography.body)
-                            .padding(AppSpacing.sm)
-                            .background(AppColors.surfaceSecondary)
-                            .cornerRadius(AppRadius.md)
+                        if !isWaterType {
+                            TextField("食量（如：一碗、50ml）", text: $amount)
+                                .font(AppTypography.body)
+                                .padding(AppSpacing.sm)
+                                .background(AppColors.surfaceSecondary)
+                                .cornerRadius(AppRadius.md)
+                        }
 
                         TextField("备注（可选）", text: $notes)
                             .font(AppTypography.body)
@@ -447,7 +481,7 @@ struct QuickAddMealSheet: View {
                         Text("保存")
                     }
                     .buttonStyle(PrimaryButtonStyle(color: AppColors.meal))
-                    .disabled(selectedFoodIDs.isEmpty && amount.isEmpty)
+                    .disabled(!canSave)
                 }
                 .padding(AppSpacing.lg)
             }
@@ -462,6 +496,14 @@ struct QuickAddMealSheet: View {
             }
         }
         .presentationDetents([.large])
+        .onChange(of: selectedType) { _, newType in
+            if newType == .water {
+                selectedFoodIDs.removeAll()
+                amount = ""
+            } else {
+                waterAmountText = ""
+            }
+        }
     }
 
     private func save() {
@@ -470,11 +512,15 @@ struct QuickAddMealSheet: View {
             .sorted { $0.sortOrder < $1.sortOrder }
             .map(\.name)
 
+        let finalWaterAmount = isWaterType ? (waterAmountML ?? 0) : 0
+        guard !isWaterType || finalWaterAmount > 0 else { return }
+
         let record = MealRecord(
             date: date,
             mealType: selectedType,
-            foodItems: selectedFoods,
-            amount: amount,
+            foodItems: isWaterType ? [] : selectedFoods,
+            amount: isWaterType ? "\(finalWaterAmount)ml" : amount,
+            waterAmountML: isWaterType ? finalWaterAmount : nil,
             notes: notes
         )
         mealRecordManager.addMealRecord(record)

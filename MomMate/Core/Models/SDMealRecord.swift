@@ -15,14 +15,24 @@ final class SDMealRecord {
     var mealTypeRaw: String
     var foodItems: [String]
     var amount: String
+    var waterAmountML: Int?
     var notes: String
     
-    init(id: UUID = UUID(), date: Date, mealType: MealType, foodItems: [String] = [], amount: String = "", notes: String = "") {
+    init(
+        id: UUID = UUID(),
+        date: Date,
+        mealType: MealType,
+        foodItems: [String] = [],
+        amount: String = "",
+        waterAmountML: Int? = nil,
+        notes: String = ""
+    ) {
         self.id = id
         self.date = date
         self.mealTypeRaw = mealType.rawValue
         self.foodItems = foodItems
         self.amount = amount
+        self.waterAmountML = waterAmountML
         self.notes = notes
     }
     
@@ -61,11 +71,27 @@ final class SDMealRecord {
     
     // 从旧模型转换
     convenience init(from record: MealRecord) {
-        self.init(id: record.id, date: record.date, mealType: record.mealType, foodItems: record.foodItems, amount: record.amount, notes: record.notes)
+        self.init(
+            id: record.id,
+            date: record.date,
+            mealType: record.mealType,
+            foodItems: record.foodItems,
+            amount: record.amount,
+            waterAmountML: record.waterAmountML,
+            notes: record.notes
+        )
     }
     
     // 转换为旧模型（用于兼容现有视图）
     func toMealRecord() -> MealRecord {
-        return MealRecord(id: id, date: date, mealType: mealType, foodItems: foodItems, amount: amount, notes: notes)
+        return MealRecord(
+            id: id,
+            date: date,
+            mealType: mealType,
+            foodItems: foodItems,
+            amount: amount,
+            waterAmountML: waterAmountML,
+            notes: notes
+        )
     }
 }

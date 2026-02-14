@@ -14,14 +14,24 @@ struct MealRecord: Identifiable, Codable {
     var mealType: MealType
     var foodItems: [String]
     var amount: String // 食量描述
+    var waterAmountML: Int? // 喝水量（毫升）
     var notes: String // 备注
     
-    init(id: UUID = UUID(), date: Date, mealType: MealType, foodItems: [String] = [], amount: String = "", notes: String = "") {
+    init(
+        id: UUID = UUID(),
+        date: Date,
+        mealType: MealType,
+        foodItems: [String] = [],
+        amount: String = "",
+        waterAmountML: Int? = nil,
+        notes: String = ""
+    ) {
         self.id = id
         self.date = date
         self.mealType = mealType
         self.foodItems = foodItems
         self.amount = amount
+        self.waterAmountML = waterAmountML
         self.notes = notes
     }
     
@@ -60,6 +70,7 @@ enum MealType: String, Codable, CaseIterable {
     case dinner = "晚餐"
     case snack = "加餐"
     case milk = "奶"
+    case water = "水"
     
     var icon: String {
         switch self {
@@ -68,6 +79,7 @@ enum MealType: String, Codable, CaseIterable {
         case .dinner: return "moon.fill"
         case .snack: return "leaf.fill"
         case .milk: return "drop.fill"
+        case .water: return "drop.circle.fill"
         }
     }
     
@@ -78,6 +90,7 @@ enum MealType: String, Codable, CaseIterable {
         case .dinner: return .blue
         case .snack: return .green
         case .milk: return .pink
+        case .water: return .cyan
         }
     }
 }
@@ -90,6 +103,7 @@ extension MealType {
         case .dinner: return "blue"
         case .snack: return "green"
         case .milk: return "pink"
+        case .water: return "cyan"
         }
     }
 }
