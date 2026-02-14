@@ -14,6 +14,14 @@ enum AuthProvider: String, Codable {
     case apple = "Apple"
     case google = "Google"
     case wechat = "微信"
+
+    var displayTitle: String {
+        switch self {
+        case .apple: return "苹果"
+        case .google: return "谷歌"
+        case .wechat: return "微信"
+        }
+    }
 }
 
 struct SocialSession: Codable {
@@ -58,7 +66,7 @@ final class AuthManager: ObservableObject {
 
     var userBadge: String {
         guard let provider else { return "" }
-        let name = displayName ?? "\(provider.rawValue)用户"
+        let name = displayName ?? "\(provider.displayTitle)用户"
         return " · \(name)"
     }
 
@@ -103,7 +111,7 @@ final class AuthManager: ObservableObject {
         let mockSession = SocialSession(
             provider: .apple,
             userID: "debug.mock.apple.user",
-            displayName: "Debug Apple User"
+            displayName: "调试 Apple 用户"
         )
         saveSession(mockSession)
     }
@@ -151,7 +159,7 @@ final class AuthManager: ObservableObject {
     }
 
     private func notConfiguredMessage(for provider: AuthProvider) -> String {
-        "\(provider.rawValue) 登录已接入入口，需先配置该平台的 Client ID / AppID 和回调 URL。"
+        "\(provider.displayTitle)登录已接入入口，需先配置该平台的客户端 ID / 应用 ID 和回调地址。"
     }
 
     private func captureFirstSyncSnapshotIfNeeded(userID: String) {

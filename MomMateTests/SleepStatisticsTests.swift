@@ -111,4 +111,16 @@ final class SleepStatisticsTests: XCTestCase {
         let stats3 = manager.dailyStatistics(from: records, days: 7)
         XCTAssertEqual(stats3.count, 7) // Still valid after recompute
     }
+
+    func testStatsRangeMonthDaysCountFor31DayMonth() {
+        // March 2026 has 31 days
+        let marchDate = DateComponents(calendar: .current, year: 2026, month: 3, day: 15).date!
+        XCTAssertEqual(StatsRange.month.daysCount(for: marchDate), 31)
+    }
+
+    func testStatsRangeMonthDaysCountForLeapYearFebruary() {
+        // February 2024 has 29 days
+        let leapFebDate = DateComponents(calendar: .current, year: 2024, month: 2, day: 10).date!
+        XCTAssertEqual(StatsRange.month.daysCount(for: leapFebDate), 29)
+    }
 }

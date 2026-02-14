@@ -28,7 +28,7 @@ struct HistoryView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(Array(recordManager.completedRecords.enumerated()), id: \.element.id) { index, record in
-                                HistoryRecordCard(record: record)
+                                SleepRecordRowView(record: record)
                                     .onTapGesture {
                                         editingRecord = record
                                     }
@@ -43,7 +43,7 @@ struct HistoryView: View {
                                 if index < recordManager.completedRecords.count - 1 {
                                     Divider()
                                         .foregroundColor(AppColors.divider)
-                                        .padding(.leading, 60)
+                                        .padding(.leading, 50)
                                 }
                             }
                         }
@@ -67,61 +67,6 @@ struct HistoryView: View {
                 EditRecordView(record: record, recordManager: recordManager)
             }
         }
-    }
-}
-
-// MARK: - 历史记录卡片
-struct HistoryRecordCard: View {
-    let record: SleepRecord
-
-    var body: some View {
-        HStack(spacing: AppSpacing.md) {
-            VStack(spacing: 2) {
-                Text(dayOfMonth)
-                    .font(AppTypography.title3)
-                    .foregroundColor(AppColors.textPrimary)
-                Text(monthAbbrev)
-                    .font(AppTypography.caption)
-                    .foregroundColor(AppColors.textTertiary)
-            }
-            .frame(width: 40)
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: AppSpacing.xs) {
-                    Text(record.formattedSleepTime)
-                        .font(AppTypography.calloutMedium)
-
-                    if let wakeTime = record.formattedWakeTime {
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(AppColors.textTertiary)
-                        Text(wakeTime)
-                            .font(AppTypography.calloutMedium)
-                    }
-                }
-                .foregroundColor(AppColors.textPrimary)
-
-                Text(record.formattedDuration)
-                    .font(AppTypography.caption)
-                    .foregroundColor(AppColors.textSecondary)
-            }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(AppColors.textTertiary)
-        }
-        .padding(.vertical, AppSpacing.sm)
-        .padding(.horizontal, AppSpacing.md)
-    }
-
-    private var dayOfMonth: String {
-        DateFormatters.dayNumber.string(from: record.sleepTime)
-    }
-
-    private var monthAbbrev: String {
-        DateFormatters.monthZh.string(from: record.sleepTime)
     }
 }
 

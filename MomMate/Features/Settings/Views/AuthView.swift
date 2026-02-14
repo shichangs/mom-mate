@@ -74,7 +74,7 @@ struct AuthView: View {
                             .frame(height: 48)
                             .clipShape(RoundedRectangle(cornerRadius: AppRadius.md))
 
-                            LoginButton(icon: "globe", title: "使用 Google 登录") {
+                            LoginButton(icon: "globe", title: "使用谷歌登录") {
                                 errorMessage = authManager.startGoogleSignIn()
                             }
 
@@ -83,7 +83,7 @@ struct AuthView: View {
                             }
 
 #if DEBUG
-                            LoginButton(icon: "hammer", title: "Debug Mock Apple 登录", color: .orange) {
+                            LoginButton(icon: "hammer", title: "调试模拟 Apple 登录", color: .orange) {
                                 authManager.debugMockSignIn()
                                 showingSheet = false
                             }

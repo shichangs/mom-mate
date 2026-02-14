@@ -18,6 +18,9 @@ final class CloudSyncStoreTests: XCTestCase {
     }
 
     override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: StorageKeys.cloudSyncEnabled)
+        UserDefaults.standard.removeObject(forKey: StorageKeys.syncAuthorized)
+        UserDefaults.standard.removeObject(forKey: StorageKeys.sessionStore)
         UserDefaults.standard.removeObject(forKey: store.storageKey)
         super.tearDown()
     }
@@ -62,5 +65,46 @@ final class CloudSyncStoreTests: XCTestCase {
 
         // Cleanup
         UserDefaults.standard.removeObject(forKey: StorageKeys.syncAuthorized)
+    }
+
+    @MainActor
+    func testAuthRestoreSessionEnablesSyncAuthorization() throws {
+        let session = SocialSession(
+            provider: .apple,
+            userID: "test.user",
+            displayName: "Test User"
+        )
+        let data = try JSONEncoder().encode(session)
+        UserDefaults.standard.set(data, forKey: StorageKeys.sessionStore)
+        UserDefaults.standard.set(false, forKey: StorageKeys.syncAuthorized)
+
+        let manager = AuthManager()
+
+        XCTAssertTrue(manager.isAuthenticated)
+        XCTAssertEqual(manager.provider, .apple)
+        XCTAssertEqual(manager.displayName, "Test User")
+        XCTAssertTrue(UserDefaults.standard.bool(forKey: StorageKeys.syncAuthorized))
+    }
+
+    @MainActor
+    func testAuthLogoutClearsSessionAndDisablesSyncAuthorization() throws {
+        let session = SocialSession(
+            provider: .apple,
+            userID: "test.user",
+            displayName: "Test User"
+        )
+        let data = try JSONEncoder().encode(session)
+        UserDefaults.standard.set(data, forKey: StorageKeys.sessionStore)
+
+        let manager = AuthManager()
+        XCTAssertTrue(manager.isAuthenticated)
+
+        manager.logout()
+
+        XCTAssertFalse(manager.isAuthenticated)
+        XCTAssertNil(manager.provider)
+        XCTAssertNil(manager.displayName)
+        XCTAssertNil(UserDefaults.standard.data(forKey: StorageKeys.sessionStore))
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: StorageKeys.syncAuthorized))
     }
 }

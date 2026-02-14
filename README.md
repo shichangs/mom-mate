@@ -1,116 +1,88 @@
 # MomMate (Baby Growth Tracker)
 
-一个优雅且功能全面的婴儿成长追踪应用，采用 **Apple 风格设计系统**，旨在帮助父母轻松记录和分析宝宝的日常活动。
+MomMate 是一款面向 0-2 岁宝宝照护场景的 iOS 记录应用，当前以“低操作成本记录 + 基础趋势统计”为核心。
 
-## ✨ 设计亮点
+## 当前已实现功能（代码基线）
 
-### Premium UI Design
+### 1. 睡眠（Sleep）
+- 一键开始/结束睡眠记录。
+- 支持“选择其他时间”补录开始或结束时间（包含跨天场景）。
+- 首页展示今日睡眠总时长、次数、与昨日对比。
+- 历史记录支持查看、编辑、删除。
 
-- **Glassmorphism 毛玻璃效果**：卡片使用 `.ultraThinMaterial` 营造通透质感
-- **三层渐变系统**：每个功能模块拥有专属的三色渐变配色
-- **情绪化色彩**：`安睡紫`、`活力橙`、`成长绿`、`喜悦紫` 等语义化配色
-- **呼吸动画 (BreathingCircle)**：睡眠状态使用三层脉冲动画
-- **多层阴影 (Layered Shadows)**：营造高级的深度感
-- **弹性动画**：按钮交互采用 Spring 物理动画
+### 2. 饮食（Meal）
+- 新增饮食记录：餐次、食材、食量、备注、时间。
+- 饮食列表支持按餐次筛选与滑动删除。
+- 今日饮食摘要展示当日记录次数与类型概览。
+- 食物清单支持新增、删除、拖拽排序，并对同名食材去重（忽略大小写与前后空格）。
+- 兼容旧版 `savedFoodList` 数据迁移到新食物清单。
 
-## 🚀 功能特点
+### 3. 成长里程碑（Milestone）
+- 支持快捷添加常见里程碑（翻身、坐稳、爬行、站立、说话、微笑）。
+- 支持自定义新增里程碑（标题、分类、日期、备注）。
+- 时间线支持按分类筛选、编辑、删除。
 
-### 😴 睡眠追踪 (Sleep Tracking)
+### 4. 统计（Statistics）
+- 支持睡眠/饮食两种统计模式切换。
+- 支持周、月、年三个统计周期并可前后翻页。
+- 睡眠统计：总睡眠时长、日均睡眠次数、日均睡眠时长趋势图。
+- 饮食统计：总进食次数、日均进食次数、主要进食类型、趋势图、类型分布环图。
 
-- **实时监测**：一键开启/结束睡眠计时，实时显示睡眠状态
-- **呼吸动画**：睡眠中使用优雅的三层脉冲动画指示
-- **历史记录**：清晰的列表展示，支持编辑和删除睡眠记录
-- **深度分析**：每日/每小时睡眠时长统计，睡眠趋势图表
+### 统计口径速查表
+- 睡眠总睡眠时长：所选周期内已完成睡眠记录（`wakeTime != nil`）时长总和。
+- 睡眠日均睡眠时长：所选周期总睡眠时长 / 周期天数。
+- 睡眠日均睡眠次数：所选周期睡眠记录次数 / 周期天数。
+- 饮食总进食次数：所选周期内饮食记录总条数。
+- 饮食日均进食次数：所选周期饮食记录总条数 / 周期天数。
+- 主要进食类型：所选周期内记录次数最多的餐次类型。
 
-### 🍼 进食记录 (Meal Records)
+### 5. 账号、设置与同步（Auth & Sync / Settings）
+- 游客模式可直接使用全部记录功能。
+- 设置页支持全局字体缩放（`0.8x ~ 1.5x`）。
+- 支持 iCloud 同步开关，且仅在“已登录 + 开关开启”时触发云同步。
+- Apple 登录可用；Google/微信当前为入口占位（未配置平台参数时给出提示）。
+- 支持退出登录且保留本机数据。
 
-- **细分记录**：支持记录早餐、午餐、晚餐、零食、母乳、奶粉
-- **快速添加**：常用食物一键选择
-- **分类统计**：按类型汇总进食量和次数
+### 6. 开发者笔记（Notes）
+- 睡眠页导航栏提供“开发者文档”入口。
+- 支持 Markdown 内容查看与编辑。
+- 笔记内容支持本地持久化，并在满足同步条件时参与 iCloud 同步。
 
-### 🏆 成长里程碑 (Milestones)
+## 当前技术基线
 
-- **记录惊喜**：记录宝宝成长过程中的每一个第一次
-- **分类管理**：身体发育、认知能力和语言社交
-- **时间轴展示**：直观展示成长历程
+- 平台：iOS 17.0+
+- 语言与框架：Swift 5.9+、SwiftUI、Combine
+- 存储：`UserDefaults + JSON`
+- 可选同步：`NSUbiquitousKeyValueStore`（iCloud KVS）
+- 架构：Feature 分层（`MomMate/Features/*`）+ 共享能力（`MomMate/Shared/*`）
 
-### 📊 统计分析 (Statistics)
+## 目录结构（当前）
 
-- **多维度视图**：汇总当日所有活动概览
-- **趋势预测**：通过图表直观展示宝宝的成长变化
-- **进度环 (ProgressRing)**：带动画的进度可视化
-
-## 🎨 设计系统 (Design System)
-
-### 色彩体系
-
-```swift
-// 情绪化色彩
-static let sleep = Color(hex: "6366F1")      // 安睡紫
-static let awake = Color(hex: "F59E0B")      // 活力橙
-static let meal = Color(hex: "10B981")       // 成长绿
-static let milestone = Color(hex: "A855F7")  // 喜悦紫
-
-// 高级渐变
-static let sleepGradient = LinearGradient(
-    colors: [Color(hex: "6366F1"), Color(hex: "8B5CF6"), Color(hex: "A78BFA")],
-    startPoint: .topLeading,
-    endPoint: .bottomTrailing
-)
-```
-
-### 组件库
-
-- `GlassCardStyle` - 毛玻璃卡片
-- `ElevatedCardStyle` - 多层阴影卡片
-- `GradientButtonStyle` - 渐变按钮
-- `FloatingButtonStyle` - 悬浮按钮
-- `BreathingCircle` - 呼吸动画圆
-- `ProgressRing` - 进度环
-- `StatsCard` - 统计卡片
-
-### 动画预设
-
-```swift
-static let springBouncy = Animation.spring(response: 0.4, dampingFraction: 0.6)
-static let springSmooth = Animation.spring(response: 0.5, dampingFraction: 0.8)
-static let springSnappy = Animation.spring(response: 0.3, dampingFraction: 0.7)
-```
-
-## 📁 项目结构
-
-```
+```text
 MomMate/
 ├── MomMate/
-│   ├── MomMateApp.swift        # 应用入口
-│   ├── MainTabView.swift       # 主导航视图 (Tab Bar)
-│   ├── ContentView.swift       # 内容视图入口
-│   ├── DesignSystem.swift      # 🎨 设计系统 (颜色/字体/组件)
-│   ├── SleepRecord.swift       # 睡眠数据模型
-│   ├── SleepRecordManager.swift # 睡眠数据管理器
-│   ├── SleepStatistics.swift   # 睡眠统计逻辑
-│   ├── MealRecord.swift        # 进食数据模型
-│   ├── MealRecordManager.swift # 进食数据管理器
-│   ├── Milestone.swift         # 里程碑数据模型
-│   ├── MilestoneManager.swift  # 里程碑数据管理器
-│   └── Assets.xcassets/        # 资源文件
-└── MomMate.xcodeproj/          # Xcode 项目文件
+│   ├── App/                    # App 入口
+│   ├── Main/                   # Tab 根导航
+│   ├── Features/
+│   │   ├── Sleep/
+│   │   ├── Meal/
+│   │   ├── Milestone/
+│   │   ├── Statistics/
+│   │   ├── Notes/
+│   │   └── Settings/
+│   ├── Shared/                 # 设计系统、存储键、云同步
+│   └── Core/
+├── MomMateTests/
+└── docs/
 ```
 
-## 🛠 技术栈
+## 文档索引
 
-- **SwiftUI**：现代化声明式 UI 开发
-- **Combine**：响应式数据处理和状态管理
-- **iOS 17.0+**：最低支持系统版本
-- **Xcode 15.0+** / **Swift 5.9+**
+- 产品需求：`docs/product/PRD.md`
+- 开发规范：`docs/process/DEVELOPMENT_GUIDELINES.md`
+- 回归清单：`docs/testing/REGRESSION_CHECKLIST.md`
+- 文档总览：`docs/README.md`
 
-## 📚 项目文档规范
-
-- `docs/product/PRD.md`：产品需求基线文档（功能范围、验收标准、版本规划）
-- `docs/process/DEVELOPMENT_GUIDELINES.md`：项目开发规范（分支、PR、质量与文档流程）
-- `docs/testing/REGRESSION_CHECKLIST.md`：回归测试清单
-- 强制规则：每次涉及功能/交互/数据/验收标准的改动，必须同步更新 `docs/product/PRD.md`
-
-## 📄 许可证
+## 许可证
 
 本项目仅供个人学习和交流使用。

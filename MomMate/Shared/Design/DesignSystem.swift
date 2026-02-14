@@ -101,6 +101,7 @@ enum DateFormatters {
     static let dayNumber: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "d"
+        formatter.locale = Locale(identifier: "zh_CN")
         return formatter
     }()
     
