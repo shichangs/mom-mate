@@ -13,6 +13,7 @@ struct SleepTabView: View {
     @ObservedObject var notesManager: NotesManager
     @State private var currentTime = Date()
     @State private var showingHistory = false
+    @State private var editingRecord: SleepRecord?
     @State private var showingNotes = false
     @State private var showingTimePicker = false
     @State private var showingSettings = false
@@ -85,6 +86,9 @@ struct SleepTabView: View {
                             RecentSleepSection(
                                 records: Array(recordManager.completedRecords.prefix(5)),
                                 recordManager: recordManager,
+                                onSelectRecord: { record in
+                                    editingRecord = record
+                                },
                                 onShowAll: { showingHistory = true }
                             )
                         }
@@ -107,6 +111,9 @@ struct SleepTabView: View {
                 HistoryView(recordManager: recordManager)
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(AppRadius.xxl)
+            }
+            .sheet(item: $editingRecord) { record in
+                EditRecordView(record: record, recordManager: recordManager)
             }
             .sheet(isPresented: $showingNotes) {
                 NotesView(notesManager: notesManager)
@@ -203,6 +210,7 @@ struct SleepDailySummary: View {
 struct RecentSleepSection: View {
     let records: [SleepRecord]
     let recordManager: SleepRecordManager
+    let onSelectRecord: (SleepRecord) -> Void
     let onShowAll: () -> Void
 
     var body: some View {
@@ -215,6 +223,10 @@ struct RecentSleepSection: View {
                         withAnimation { recordManager.deleteRecord(record) }
                     }) {
                         SleepRecordRowView(record: record)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onSelectRecord(record)
+                            }
                     }
                     .transition(.asymmetric(
                         insertion: .move(edge: .bottom).combined(with: .opacity),
