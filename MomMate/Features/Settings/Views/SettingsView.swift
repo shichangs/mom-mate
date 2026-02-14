@@ -30,6 +30,29 @@ struct SettingsView: View {
     @State private var clearOptions = DataClearOptions()
     @State private var countdownTask: Task<Void, Never>?
 
+    private let versionHighlights: [String: [String]] = [
+        "1.0.1": [
+            "设置页新增版本号显示，便于确认当前安装版本。",
+            "设置页新增简洁更新信息，帮助快速了解本次变化。"
+        ]
+    ]
+
+    private var shortVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
+    }
+
+    private var buildVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "-"
+    }
+
+    private var displayVersion: String {
+        "v\(shortVersion) (\(buildVersion))"
+    }
+
+    private var currentVersionHighlights: [String] {
+        versionHighlights[shortVersion] ?? ["体验优化与问题修复。"]
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -212,6 +235,49 @@ struct SettingsView: View {
                             .foregroundColor(AppColors.textTertiary)
                             .frame(maxWidth: .infinity)
                             .multilineTextAlignment(.center)
+
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("版本信息")
+                                .font(AppTypography.calloutMedium)
+                                .foregroundColor(AppColors.textSecondary)
+
+                            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                                HStack(spacing: AppSpacing.md) {
+                                    Image(systemName: "number.circle")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(AppColors.primary)
+                                        .frame(width: 24)
+
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text("当前版本")
+                                            .font(AppTypography.calloutMedium)
+                                            .foregroundColor(AppColors.textPrimary)
+                                        Text(displayVersion)
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textTertiary)
+                                    }
+                                }
+
+                                Divider()
+                                    .foregroundColor(AppColors.divider)
+
+                                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                                    Text("本次更新")
+                                        .font(AppTypography.captionMedium)
+                                        .foregroundColor(AppColors.textSecondary)
+
+                                    ForEach(currentVersionHighlights, id: \.self) { item in
+                                        Text("• \(item)")
+                                            .font(AppTypography.caption)
+                                            .foregroundColor(AppColors.textTertiary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
+                            .padding(AppSpacing.md)
+                            .background(AppColors.surface)
+                            .cornerRadius(AppRadius.lg)
+                        }
                     }
                     .padding(.horizontal, AppSpacing.lg)
                     .padding(.vertical, AppSpacing.xl)
