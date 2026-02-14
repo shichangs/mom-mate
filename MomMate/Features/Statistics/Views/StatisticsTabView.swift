@@ -305,7 +305,7 @@ struct StatsOverviewRow: View {
             } else {
                 OverviewMetric(title: "总进食次数", value: "\(totalMealCount)", unit: "次", color: AppColors.meal)
                 OverviewMetric(title: "日均进食次数", value: String(format: "%.1f", averageDailyMeals), unit: "次/天", color: AppColors.meal)
-                OverviewMetric(title: "主要进食类型", value: topMealType, unit: "", color: AppColors.meal)
+                OverviewMetric(title: "日均喝水量", value: "\(averageDailyWaterML)", unit: "ml/天", color: AppColors.meal)
             }
         }
     }
@@ -315,7 +315,7 @@ struct StatsOverviewRow: View {
         return sleepManager.sleepRangeSummary(start: start, end: end)
     }
 
-    private var mealSummary: (totalCount: Int, typeCounts: [MealType: Int]) {
+    private var mealSummary: (totalCount: Int, mealCount: Int, waterCount: Int, typeCounts: [MealType: Int], totalWaterML: Int) {
         let (start, end) = dateRange
         return mealManager.mealRangeSummary(start: start, end: end)
     }
@@ -340,16 +340,14 @@ struct StatsOverviewRow: View {
         String(format: "%.1f", Double(sleepSummary.count) / Double(days))
     }
 
-    private var totalMealCount: Int { mealSummary.totalCount }
+    private var totalMealCount: Int { mealSummary.mealCount }
 
     private var averageDailyMeals: Double {
-        Double(mealSummary.totalCount) / Double(days)
+        Double(mealSummary.mealCount) / Double(days)
     }
 
-    private var topMealType: String {
-        guard !mealSummary.typeCounts.isEmpty else { return "无" }
-        let maxType = mealSummary.typeCounts.max(by: { $0.value < $1.value })?.key
-        return maxType?.rawValue ?? "无"
+    private var averageDailyWaterML: Int {
+        Int(round(Double(mealSummary.totalWaterML) / Double(days)))
     }
 }
 
@@ -525,14 +523,38 @@ struct MealStatsContent: View {
                     ?? cal.date(byAdding: .day, value: daysInMonth, to: monthDate)
                     ?? monthDate
                 let summary = mealManager.mealRangeSummary(start: monthDate, end: monthEnd)
-                return (date: monthDate, value: Double(summary.totalCount) / Double(daysInMonth))
+                return (date: monthDate, value: Double(summary.mealCount) / Double(daysInMonth))
             }
         } else {
             let days = cal.dateComponents([.day], from: start, to: end).day ?? 1
             return (0..<days).map { i in
                 let date = cal.date(byAdding: .day, value: i, to: start) ?? start
                 let summary = mealManager.mealDaySummary(for: date)
-                return (date: date, value: Double(summary.totalCount))
+                return (date: date, value: Double(summary.mealCount))
+            }
+        }
+    }
+
+    private var waterTrendData: [(date: Date, value: Double)] {
+        let cal = Calendar.current
+        let (start, end) = dateRange
+
+        if range == .year {
+            return (0..<12).map { i in
+                let monthDate = cal.date(byAdding: .month, value: i, to: start) ?? start
+                let daysInMonth = cal.range(of: .day, in: .month, for: monthDate)?.count ?? 30
+                let monthEnd = cal.date(byAdding: .month, value: 1, to: monthDate)
+                    ?? cal.date(byAdding: .day, value: daysInMonth, to: monthDate)
+                    ?? monthDate
+                let summary = mealManager.mealRangeSummary(start: monthDate, end: monthEnd)
+                return (date: monthDate, value: Double(summary.totalWaterML) / Double(daysInMonth))
+            }
+        } else {
+            let days = cal.dateComponents([.day], from: start, to: end).day ?? 1
+            return (0..<days).map { i in
+                let date = cal.date(byAdding: .day, value: i, to: start) ?? start
+                let summary = mealManager.mealDaySummary(for: date)
+                return (date: date, value: Double(summary.totalWaterML))
             }
         }
     }
@@ -540,7 +562,8 @@ struct MealStatsContent: View {
     private var typeDistribution: [(type: String, count: Int)] {
         let (start, end) = dateRange
         let summary = mealManager.mealRangeSummary(start: start, end: end)
-        return MealType.allCases.map { type in
+        return MealType.allCases
+            .map { type in
             (type: type.rawValue, count: summary.typeCounts[type] ?? 0)
         }.filter { $0.count > 0 }
     }
@@ -562,10 +585,25 @@ struct MealStatsContent: View {
             }
             .glassCard()
 
+            // 喝水趋势
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                Text(waterChartTitle)
+                    .font(AppTypography.calloutMedium)
+                    .foregroundColor(AppColors.textSecondary)
+
+                TrendChart(
+                    data: waterTrendData,
+                    range: range,
+                    color: .cyan,
+                    yLabel: "ml"
+                )
+            }
+            .glassCard()
+
             // 类型分布
             if !typeDistribution.isEmpty {
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    Text("进食类型分布")
+                    Text("饮食类型分布（含饮水）")
                         .font(AppTypography.calloutMedium)
                         .foregroundColor(AppColors.textSecondary)
 
@@ -585,10 +623,34 @@ struct MealStatsContent: View {
                         domain: MealType.allCases.map { $0.rawValue },
                         range: MealType.allCases.map { $0.color.opacity(0.7) }
                     )
+
+                    VStack(spacing: AppSpacing.xs) {
+                        ForEach(typeDistribution, id: \.type) { item in
+                            HStack(spacing: AppSpacing.xs) {
+                                Circle()
+                                    .fill(color(for: item.type).opacity(0.7))
+                                    .frame(width: 8, height: 8)
+
+                                Text(item.type)
+                                    .font(AppTypography.footnote)
+                                    .foregroundColor(AppColors.textSecondary)
+
+                                Spacer()
+
+                                Text("\(item.count) 次")
+                                    .font(AppTypography.footnoteMedium)
+                                    .foregroundColor(AppColors.textPrimary)
+                            }
+                        }
+                    }
                 }
                 .glassCard()
             }
         }
+    }
+
+    private func color(for typeName: String) -> Color {
+        MealType.allCases.first(where: { $0.rawValue == typeName })?.color ?? AppColors.secondary
     }
 
     private var chartTitle: String {
@@ -596,6 +658,14 @@ struct MealStatsContent: View {
         case .week:  return "每日进食次数"
         case .month: return "每日进食次数"
         case .year:  return "月均进食次数"
+        }
+    }
+
+    private var waterChartTitle: String {
+        switch range {
+        case .week:  return "每日喝水量（ml）"
+        case .month: return "每日喝水量（ml）"
+        case .year:  return "月均每日喝水量（ml）"
         }
     }
 }

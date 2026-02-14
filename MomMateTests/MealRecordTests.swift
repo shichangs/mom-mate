@@ -25,18 +25,20 @@ final class MealRecordTests: XCTestCase {
     }
 
     func testMealTypeCases() {
-        XCTAssertEqual(MealType.allCases.count, 5)
+        XCTAssertEqual(MealType.allCases.count, 6)
         XCTAssertEqual(MealType.breakfast.rawValue, "早餐")
         XCTAssertEqual(MealType.lunch.rawValue, "午餐")
         XCTAssertEqual(MealType.dinner.rawValue, "晚餐")
         XCTAssertEqual(MealType.snack.rawValue, "加餐")
         XCTAssertEqual(MealType.milk.rawValue, "奶")
+        XCTAssertEqual(MealType.water.rawValue, "水")
     }
 
     func testMealTypeIcons() {
         XCTAssertFalse(MealType.breakfast.icon.isEmpty)
         XCTAssertFalse(MealType.lunch.icon.isEmpty)
         XCTAssertFalse(MealType.dinner.icon.isEmpty)
+        XCTAssertFalse(MealType.water.icon.isEmpty)
     }
 
     func testMealRecordCodable() throws {
@@ -53,5 +55,22 @@ final class MealRecordTests: XCTestCase {
         XCTAssertEqual(decoded.id, original.id)
         XCTAssertEqual(decoded.mealType, .lunch)
         XCTAssertEqual(decoded.foodItems, ["鸡蛋"])
+    }
+
+    func testWaterRecordCodable() throws {
+        let original = MealRecord(
+            date: Date(),
+            mealType: .water,
+            foodItems: [],
+            amount: "180ml",
+            waterAmountML: 180,
+            notes: "上午"
+        )
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(MealRecord.self, from: data)
+
+        XCTAssertEqual(decoded.mealType, .water)
+        XCTAssertEqual(decoded.waterAmountML, 180)
+        XCTAssertEqual(decoded.amount, "180ml")
     }
 }

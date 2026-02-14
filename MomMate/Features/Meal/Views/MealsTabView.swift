@@ -15,6 +15,7 @@ struct MealsTabView: View {
     @State private var showingFoodList = false
     @State private var selectedFilter: MealType?
     @State private var showFAB = true
+    @AppStorage(StorageKeys.dailyWaterGoalML) private var dailyWaterGoalML: Int = 800
     @AppStorage(StorageKeys.fontSizeFactor) private var fontSizeFactor: Double = 1.0
 
     private var filteredRecords: [MealRecord] {
@@ -29,6 +30,16 @@ struct MealsTabView: View {
         mealRecordManager.mealRecordsForToday()
     }
 
+    private var todaySummary: (
+        totalCount: Int,
+        mealCount: Int,
+        waterCount: Int,
+        typeCounts: [MealType: Int],
+        totalWaterML: Int
+    ) {
+        mealRecordManager.mealDaySummary(for: Date())
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -36,9 +47,17 @@ struct MealsTabView: View {
                     .ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: AppSpacing.xl) {
-                        // 今日概览
-                        MealDailySummary(records: todayRecords)
+                    VStack(spacing: AppSpacing.lg) {
+                        VStack(spacing: AppSpacing.sm) {
+                            // 今日概览
+                            MealDailySummary(records: todayRecords, mealCount: todaySummary.mealCount)
+
+                            // 今日饮水
+                            MealDailyWaterProgress(
+                                waterTotalML: todaySummary.totalWaterML,
+                                waterGoalML: $dailyWaterGoalML
+                            )
+                        }
 
                         // 食物清单入口
                         FoodListEntryButton(onTap: { showingFoodList = true })
@@ -124,6 +143,7 @@ struct MealsTabView: View {
 // MARK: - 今日饮食概览
 struct MealDailySummary: View {
     let records: [MealRecord]
+    let mealCount: Int
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
@@ -137,7 +157,7 @@ struct MealDailySummary: View {
                     .foregroundColor(AppColors.textSecondary)
 
                 HStack(alignment: .lastTextBaseline, spacing: AppSpacing.xs) {
-                    Text("\(records.count) 次记录")
+                    Text("\(mealCount) 次进食")
                         .font(AppTypography.title2)
                         .foregroundColor(AppColors.textPrimary)
                 }
@@ -145,7 +165,7 @@ struct MealDailySummary: View {
 
             Spacer()
 
-            if !records.isEmpty {
+            if mealCount > 0 {
                 HStack(spacing: AppSpacing.xs) {
                     ForEach(mealTypeSummary(), id: \.type) { item in
                         RoundedRectangle(cornerRadius: 2)
@@ -168,11 +188,79 @@ struct MealDailySummary: View {
 
     private func mealTypeSummary() -> [(type: String, color: Color)] {
         var result: [(type: String, color: Color)] = []
-        let types = Set(records.map { $0.mealType })
+        let types = Set(records.filter { $0.mealType != .water }.map { $0.mealType })
         for type in MealType.allCases where types.contains(type) {
             result.append((type: type.rawValue, color: type.color))
         }
         return result
+    }
+}
+
+struct MealDailyWaterProgress: View {
+    let waterTotalML: Int
+    @Binding var waterGoalML: Int
+
+    @State private var showingGoalAlert = false
+    @State private var goalInput: String = ""
+
+    private var progress: Double {
+        guard waterGoalML > 0 else { return 0 }
+        return min(Double(waterTotalML) / Double(waterGoalML), 1.0)
+    }
+
+    var body: some View {
+        HStack(spacing: AppSpacing.md) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(AppColors.sleep)
+                .frame(width: 3, height: 56)
+
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("今日饮水")
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.textSecondary)
+                        Text("\(waterTotalML) / \(waterGoalML) ml")
+                            .font(AppTypography.title3)
+                            .foregroundColor(AppColors.textPrimary)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        goalInput = "\(waterGoalML)"
+                        showingGoalAlert = true
+                    } label: {
+                        Text("目标 \(waterGoalML)ml")
+                            .font(AppTypography.caption)
+                            .foregroundColor(AppColors.sleep)
+                            .padding(.horizontal, AppSpacing.sm)
+                            .padding(.vertical, AppSpacing.xs)
+                            .background(AppColors.surfaceSecondary)
+                            .cornerRadius(AppRadius.md)
+                    }
+                }
+
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+                    .tint(AppColors.sleep)
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(AppColors.sleepTint)
+        .cornerRadius(AppRadius.lg)
+        .alert("设置每日饮水目标", isPresented: $showingGoalAlert) {
+            TextField("目标 ml", text: $goalInput)
+                .keyboardType(.numberPad)
+            Button("取消", role: .cancel) {}
+            Button("保存") {
+                if let value = Int(goalInput.trimmingCharacters(in: .whitespacesAndNewlines)), value > 0 {
+                    waterGoalML = value
+                }
+            }
+        } message: {
+            Text("请输入正整数（毫升）")
+        }
     }
 }
 
@@ -183,9 +271,13 @@ struct FoodListEntryButton: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: AppSpacing.sm) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(AppColors.milestone)
+                    .frame(width: 3, height: 38)
+
                 Image(systemName: "list.bullet")
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(AppColors.meal)
+                    .foregroundColor(AppColors.milestone)
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("妈妈食谱")
@@ -200,10 +292,10 @@ struct FoodListEntryButton: View {
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppColors.textTertiary)
+                    .foregroundColor(AppColors.milestone.opacity(0.55))
             }
             .padding(AppSpacing.md)
-            .background(AppColors.surface)
+            .background(AppColors.milestoneTint)
             .cornerRadius(AppRadius.lg)
         }
     }
@@ -213,30 +305,29 @@ struct FoodListEntryButton: View {
 struct MealFilterBar: View {
     @Binding var selectedFilter: MealType?
     let mealRecordManager: MealRecordManager
+    private let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: AppSpacing.xs), count: 4)
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: AppSpacing.xs) {
-                FilterChip(
-                    title: "全部",
-                    count: mealRecordManager.mealRecords.count,
-                    isSelected: selectedFilter == nil,
-                    color: AppColors.primary
-                ) {
-                    withAnimation(AppAnimation.springSnappy) { selectedFilter = nil }
-                }
+        LazyVGrid(columns: columns, alignment: .leading, spacing: AppSpacing.xs) {
+            FilterChip(
+                title: "全部",
+                count: mealRecordManager.mealRecords.count,
+                isSelected: selectedFilter == nil,
+                color: AppColors.primary
+            ) {
+                withAnimation(AppAnimation.springSnappy) { selectedFilter = nil }
+            }
 
-                ForEach(MealType.allCases, id: \.self) { type in
-                    let count = mealRecordManager.mealRecordsByType(type).count
-                    FilterChip(
-                        title: type.rawValue,
-                        count: count,
-                        isSelected: selectedFilter == type,
-                        color: AppColors.meal
-                    ) {
-                        withAnimation(AppAnimation.springSnappy) {
-                            selectedFilter = selectedFilter == type ? nil : type
-                        }
+            ForEach(MealType.allCases, id: \.self) { type in
+                let count = mealRecordManager.mealRecordsByType(type).count
+                FilterChip(
+                    title: type.rawValue,
+                    count: count,
+                    isSelected: selectedFilter == type,
+                    color: AppColors.meal
+                ) {
+                    withAnimation(AppAnimation.springSnappy) {
+                        selectedFilter = selectedFilter == type ? nil : type
                     }
                 }
             }
@@ -262,8 +353,9 @@ struct FilterChip: View {
             }
             .font(AppTypography.footnoteMedium)
             .foregroundColor(isSelected ? .white : AppColors.textSecondary)
-            .padding(.horizontal, AppSpacing.sm)
-            .padding(.vertical, AppSpacing.xs)
+            .padding(.horizontal, AppSpacing.xs)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
             .background(
                 Capsule()
                     .fill(isSelected ? color : AppColors.surfaceSecondary)
@@ -341,8 +433,28 @@ struct QuickAddMealSheet: View {
     @State private var selectedType: MealType = .lunch
     @State private var selectedFoodIDs: Set<UUID> = []
     @State private var amount: String = ""
+    @State private var waterAmountText: String = ""
+    @State private var isCustomWaterAmount = false
     @State private var notes: String = ""
     @State private var date = Date()
+    
+    private var isWaterType: Bool {
+        selectedType == .water
+    }
+
+    private let waterPresets: [Int] = [50, 100, 200, 500]
+
+    private var waterAmountML: Int? {
+        Int(waterAmountText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private var canSave: Bool {
+        if isWaterType {
+            return (waterAmountML ?? 0) > 0
+        }
+
+        return !selectedFoodIDs.isEmpty || !amount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         NavigationView {
@@ -383,36 +495,89 @@ struct QuickAddMealSheet: View {
                         }
                     }
 
-                    // 食材选择
-                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                        Text("食材")
-                            .font(AppTypography.calloutMedium)
-                            .foregroundColor(AppColors.textSecondary)
+                    // 食材选择 / 喝水量
+                    if isWaterType {
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("喝水量")
+                                .font(AppTypography.calloutMedium)
+                                .foregroundColor(AppColors.textSecondary)
 
-                        if foodCatalogManager.activeItems.isEmpty {
-                            Text("暂无食材，请先在食谱中添加")
-                                .font(AppTypography.footnote)
-                                .foregroundColor(AppColors.textTertiary)
-                        } else {
-                            FlowLayout(spacing: AppSpacing.xs) {
-                                ForEach(foodCatalogManager.activeItems) { food in
-                                    let isSelected = selectedFoodIDs.contains(food.id)
-                                    Button(action: {
-                                        if isSelected {
-                                            selectedFoodIDs.remove(food.id)
-                                        } else {
-                                            selectedFoodIDs.insert(food.id)
-                                        }
-                                    }) {
-                                        Text(food.name)
+                            HStack(spacing: AppSpacing.xs) {
+                                ForEach(waterPresets, id: \.self) { preset in
+                                    let selected = !isCustomWaterAmount && waterAmountML == preset
+                                    Button {
+                                        isCustomWaterAmount = false
+                                        waterAmountText = "\(preset)"
+                                    } label: {
+                                        Text("\(preset)ml")
                                             .font(AppTypography.footnoteMedium)
-                                            .foregroundColor(isSelected ? .white : AppColors.textPrimary)
+                                            .foregroundColor(selected ? .white : AppColors.textSecondary)
                                             .padding(.horizontal, AppSpacing.sm)
                                             .padding(.vertical, AppSpacing.xs)
                                             .background(
                                                 Capsule()
-                                                    .fill(isSelected ? AppColors.meal : AppColors.surfaceSecondary)
+                                                    .fill(selected ? .cyan : AppColors.surfaceSecondary)
                                             )
+                                    }
+                                }
+
+                                let customSelected = isCustomWaterAmount
+                                Button {
+                                    isCustomWaterAmount = true
+                                    waterAmountText = ""
+                                } label: {
+                                    Text("自定义")
+                                        .font(AppTypography.footnoteMedium)
+                                        .foregroundColor(customSelected ? .white : AppColors.textSecondary)
+                                        .padding(.horizontal, AppSpacing.sm)
+                                        .padding(.vertical, AppSpacing.xs)
+                                        .background(
+                                            Capsule()
+                                                .fill(customSelected ? .cyan : AppColors.surfaceSecondary)
+                                        )
+                                }
+                            }
+
+                            if isCustomWaterAmount {
+                                TextField("请输入毫升数", text: $waterAmountText)
+                                    .keyboardType(.numberPad)
+                                    .font(AppTypography.body)
+                                    .padding(AppSpacing.sm)
+                                    .background(AppColors.surfaceSecondary)
+                                    .cornerRadius(AppRadius.md)
+                            }
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("食材")
+                                .font(AppTypography.calloutMedium)
+                                .foregroundColor(AppColors.textSecondary)
+
+                            if foodCatalogManager.activeItems.isEmpty {
+                                Text("暂无食材，请先在食谱中添加")
+                                    .font(AppTypography.footnote)
+                                    .foregroundColor(AppColors.textTertiary)
+                            } else {
+                                FlowLayout(spacing: AppSpacing.xs) {
+                                    ForEach(foodCatalogManager.activeItems) { food in
+                                        let isSelected = selectedFoodIDs.contains(food.id)
+                                        Button(action: {
+                                            if isSelected {
+                                                selectedFoodIDs.remove(food.id)
+                                            } else {
+                                                selectedFoodIDs.insert(food.id)
+                                            }
+                                        }) {
+                                            Text(food.name)
+                                                .font(AppTypography.footnoteMedium)
+                                                .foregroundColor(isSelected ? .white : AppColors.textPrimary)
+                                                .padding(.horizontal, AppSpacing.sm)
+                                                .padding(.vertical, AppSpacing.xs)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(isSelected ? AppColors.meal : AppColors.surfaceSecondary)
+                                                )
+                                        }
                                     }
                                 }
                             }
@@ -425,11 +590,13 @@ struct QuickAddMealSheet: View {
                             .font(AppTypography.calloutMedium)
                             .foregroundColor(AppColors.textSecondary)
 
-                        TextField("食量（如：一碗、50ml）", text: $amount)
-                            .font(AppTypography.body)
-                            .padding(AppSpacing.sm)
-                            .background(AppColors.surfaceSecondary)
-                            .cornerRadius(AppRadius.md)
+                        if !isWaterType {
+                            TextField("食量（如：一碗、50ml）", text: $amount)
+                                .font(AppTypography.body)
+                                .padding(AppSpacing.sm)
+                                .background(AppColors.surfaceSecondary)
+                                .cornerRadius(AppRadius.md)
+                        }
 
                         TextField("备注（可选）", text: $notes)
                             .font(AppTypography.body)
@@ -447,7 +614,7 @@ struct QuickAddMealSheet: View {
                         Text("保存")
                     }
                     .buttonStyle(PrimaryButtonStyle(color: AppColors.meal))
-                    .disabled(selectedFoodIDs.isEmpty && amount.isEmpty)
+                    .disabled(!canSave)
                 }
                 .padding(AppSpacing.lg)
             }
@@ -462,6 +629,17 @@ struct QuickAddMealSheet: View {
             }
         }
         .presentationDetents([.large])
+        .onChange(of: selectedType) { _, newType in
+            if newType == .water {
+                selectedFoodIDs.removeAll()
+                amount = ""
+                isCustomWaterAmount = false
+                waterAmountText = "\(waterPresets[1])"
+            } else {
+                waterAmountText = ""
+                isCustomWaterAmount = false
+            }
+        }
     }
 
     private func save() {
@@ -470,11 +648,15 @@ struct QuickAddMealSheet: View {
             .sorted { $0.sortOrder < $1.sortOrder }
             .map(\.name)
 
+        let finalWaterAmount = isWaterType ? (waterAmountML ?? 0) : 0
+        guard !isWaterType || finalWaterAmount > 0 else { return }
+
         let record = MealRecord(
             date: date,
             mealType: selectedType,
-            foodItems: selectedFoods,
-            amount: amount,
+            foodItems: isWaterType ? [] : selectedFoods,
+            amount: isWaterType ? "\(finalWaterAmount)ml" : amount,
+            waterAmountML: isWaterType ? finalWaterAmount : nil,
             notes: notes
         )
         mealRecordManager.addMealRecord(record)
