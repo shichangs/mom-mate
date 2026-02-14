@@ -116,6 +116,11 @@ class MealRecordManager: ObservableObject, CloudSyncObserver {
         return (total, mealCount, waterCount, typeCounts, totalWaterML)
     }
 
+    func clearAllData() {
+        mealRecords = []
+        saveMealRecords()
+    }
+
     // MARK: - Persistence (via CloudSyncStore)
 
     private func saveMealRecords() {

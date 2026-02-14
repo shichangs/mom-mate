@@ -10,7 +10,6 @@ import SwiftUI
 
 struct MainTabView: View {
     @StateObject private var recordManager = SleepRecordManager()
-    @StateObject private var notesManager = NotesManager()
     @StateObject private var milestoneManager = MilestoneManager()
     @StateObject private var mealRecordManager = MealRecordManager()
     @State private var selectedTab = 0
@@ -19,7 +18,7 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             SleepTabView(
                 recordManager: recordManager,
-                notesManager: notesManager
+                onClearData: clearData
             )
             .tabItem {
                 Label("睡眠", systemImage: selectedTab == 0 ? "moon.zzz.fill" : "moon.zzz")
@@ -55,6 +54,19 @@ struct MainTabView: View {
             appearance.shadowColor = UIColor(AppColors.border.opacity(0.3))
             UITabBar.appearance().standardAppearance = appearance
             UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+    }
+
+    private func clearData(options: DataClearOptions) {
+        if options.sleep {
+            recordManager.clearAllData()
+            UserDefaults.standard.removeObject(forKey: StorageKeys.testDataGenerated)
+        }
+        if options.meal {
+            mealRecordManager.clearAllData()
+        }
+        if options.milestone {
+            milestoneManager.clearAllData()
         }
     }
 }

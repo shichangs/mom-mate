@@ -35,6 +35,11 @@ class NotesManager: ObservableObject, CloudSyncObserver {
         notes = store.loadString()
     }
 
+    func clearAllData() {
+        notes = ""
+        saveNotes()
+    }
+
     private func initializeDefaultNotes() {
         notes = NotesManager.defaultNotesContent(formattedDate: formatDate(Date()))
         saveNotes()

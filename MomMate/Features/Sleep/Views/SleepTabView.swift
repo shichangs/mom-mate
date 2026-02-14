@@ -10,10 +10,10 @@ import SwiftUI
 // MARK: - 睡眠 Tab 主视图
 struct SleepTabView: View {
     @ObservedObject var recordManager: SleepRecordManager
-    @ObservedObject var notesManager: NotesManager
+    let onClearData: (DataClearOptions) -> Void
     @State private var currentTime = Date()
     @State private var showingHistory = false
-    @State private var showingNotes = false
+    @State private var editingRecord: SleepRecord?
     @State private var showingTimePicker = false
     @State private var showingSettings = false
     @AppStorage(StorageKeys.fontSizeFactor) private var fontSizeFactor: Double = 1.0
@@ -85,6 +85,9 @@ struct SleepTabView: View {
                             RecentSleepSection(
                                 records: Array(recordManager.completedRecords.prefix(5)),
                                 recordManager: recordManager,
+                                onSelectRecord: { record in
+                                    editingRecord = record
+                                },
                                 onShowAll: { showingHistory = true }
                             )
                         }
@@ -97,10 +100,7 @@ struct SleepTabView: View {
             .navigationTitle("睡眠")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItems(
-                    showingSettings: $showingSettings,
-                    showingNotes: $showingNotes
-                )
+                ToolbarItems(showingSettings: $showingSettings)
             }
             .id(fontSizeFactor)
             .sheet(isPresented: $showingHistory) {
@@ -108,13 +108,11 @@ struct SleepTabView: View {
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(AppRadius.xxl)
             }
-            .sheet(isPresented: $showingNotes) {
-                NotesView(notesManager: notesManager)
-                    .presentationDragIndicator(.visible)
-                    .presentationCornerRadius(AppRadius.xxl)
+            .sheet(item: $editingRecord) { record in
+                EditRecordView(record: record, recordManager: recordManager)
             }
             .sheet(isPresented: $showingSettings) {
-                SettingsView()
+                SettingsView(onClearData: onClearData)
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(AppRadius.xxl)
             }
@@ -203,6 +201,7 @@ struct SleepDailySummary: View {
 struct RecentSleepSection: View {
     let records: [SleepRecord]
     let recordManager: SleepRecordManager
+    let onSelectRecord: (SleepRecord) -> Void
     let onShowAll: () -> Void
 
     var body: some View {
@@ -215,6 +214,10 @@ struct RecentSleepSection: View {
                         withAnimation { recordManager.deleteRecord(record) }
                     }) {
                         SleepRecordRowView(record: record)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onSelectRecord(record)
+                            }
                     }
                     .transition(.asymmetric(
                         insertion: .move(edge: .bottom).combined(with: .opacity),
