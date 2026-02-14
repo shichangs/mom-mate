@@ -430,13 +430,13 @@ struct QuickAddMealSheet: View {
     @ObservedObject var foodCatalogManager: FoodCatalogManager
     @Environment(\.dismiss) var dismiss
 
-    @State private var selectedType: MealType = .lunch
+    @State private var selectedType: MealType
     @State private var selectedFoodIDs: Set<UUID> = []
     @State private var amount: String = ""
     @State private var waterAmountText: String = ""
     @State private var isCustomWaterAmount = false
     @State private var notes: String = ""
-    @State private var date = Date()
+    @State private var date: Date
     
     private var isWaterType: Bool {
         selectedType == .water
@@ -454,6 +454,17 @@ struct QuickAddMealSheet: View {
         }
 
         return !selectedFoodIDs.isEmpty || !amount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    init(
+        mealRecordManager: MealRecordManager,
+        foodCatalogManager: FoodCatalogManager,
+        defaultDate: Date = Date()
+    ) {
+        self.mealRecordManager = mealRecordManager
+        self.foodCatalogManager = foodCatalogManager
+        _date = State(initialValue: defaultDate)
+        _selectedType = State(initialValue: MealType.defaultPrimaryMealType(for: defaultDate))
     }
 
     var body: some View {

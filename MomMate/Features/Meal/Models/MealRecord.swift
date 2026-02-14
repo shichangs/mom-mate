@@ -96,6 +96,18 @@ enum MealType: String, Codable, CaseIterable {
 }
 
 extension MealType {
+    static func defaultPrimaryMealType(for date: Date, calendar: Calendar = .current) -> MealType {
+        let hour = calendar.component(.hour, from: date)
+        switch hour {
+        case 5..<11:
+            return .breakfast
+        case 11..<17:
+            return .lunch
+        default:
+            return .dinner
+        }
+    }
+
     var colorString: String {
         switch self {
         case .breakfast: return "orange"
