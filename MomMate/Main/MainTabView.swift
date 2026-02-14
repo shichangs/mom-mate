@@ -10,7 +10,6 @@ import SwiftUI
 
 struct MainTabView: View {
     @StateObject private var recordManager = SleepRecordManager()
-    @StateObject private var notesManager = NotesManager()
     @StateObject private var milestoneManager = MilestoneManager()
     @StateObject private var mealRecordManager = MealRecordManager()
     @State private var selectedTab = 0
@@ -19,7 +18,6 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             SleepTabView(
                 recordManager: recordManager,
-                notesManager: notesManager,
                 onClearData: clearData
             )
             .tabItem {

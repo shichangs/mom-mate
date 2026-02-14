@@ -4,7 +4,6 @@
 
 ### Added
 
- - [Sleep][Notes] 新增睡眠页工具栏“开发者文档”入口，可直接打开 Notes 页面。
 - [Test] 新增 SleepTab 组件交互测试（入睡/醒来/选择其他时间按钮回调触发）。
 - [Test] 新增 NotesManager 持久化测试（保存后重建 Manager 可读到最新内容）。
 
@@ -29,6 +28,8 @@
 ### Fixed
 
 ### Removed
+
+- [Sleep][Notes] 移除睡眠页工具栏的 Notes 入口，用户流程不再暴露开发者笔记页面。
 
 ### Docs
 - [Docs] 新增“当前实现状态快照（2026-02-13）”，明确各模块已实现/部分实现边界。

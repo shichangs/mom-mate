@@ -10,12 +10,10 @@ import SwiftUI
 // MARK: - 睡眠 Tab 主视图
 struct SleepTabView: View {
     @ObservedObject var recordManager: SleepRecordManager
-    @ObservedObject var notesManager: NotesManager
     let onClearData: (DataClearOptions) -> Void
     @State private var currentTime = Date()
     @State private var showingHistory = false
     @State private var editingRecord: SleepRecord?
-    @State private var showingNotes = false
     @State private var showingTimePicker = false
     @State private var showingSettings = false
     @AppStorage(StorageKeys.fontSizeFactor) private var fontSizeFactor: Double = 1.0
@@ -102,10 +100,7 @@ struct SleepTabView: View {
             .navigationTitle("睡眠")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItems(
-                    showingSettings: $showingSettings,
-                    showingNotes: $showingNotes
-                )
+                ToolbarItems(showingSettings: $showingSettings)
             }
             .id(fontSizeFactor)
             .sheet(isPresented: $showingHistory) {
@@ -115,11 +110,6 @@ struct SleepTabView: View {
             }
             .sheet(item: $editingRecord) { record in
                 EditRecordView(record: record, recordManager: recordManager)
-            }
-            .sheet(isPresented: $showingNotes) {
-                NotesView(notesManager: notesManager)
-                    .presentationDragIndicator(.visible)
-                    .presentationCornerRadius(AppRadius.xxl)
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView(onClearData: onClearData)

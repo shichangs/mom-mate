@@ -146,20 +146,11 @@ struct AwakeStatusCard: View {
 // MARK: - 工具栏
 struct ToolbarItems: ToolbarContent {
     @Binding var showingSettings: Bool
-    @Binding var showingNotes: Bool
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
             Button(action: { showingSettings = true }) {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(AppColors.textSecondary)
-            }
-        }
-
-        ToolbarItem(placement: .navigationBarTrailing) {
-            Button(action: { showingNotes = true }) {
-                Image(systemName: "doc.text")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(AppColors.textSecondary)
             }
