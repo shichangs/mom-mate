@@ -21,6 +21,7 @@ enum StorageKeys {
 
     // Settings
     static let fontSizeFactor = "fontSizeFactor"
+    static let dailyWaterGoalML = "dailyWaterGoalML"
     static let testDataGenerated = "TestDataGenerated"
 
     // Food catalog

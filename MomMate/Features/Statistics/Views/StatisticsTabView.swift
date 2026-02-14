@@ -315,7 +315,7 @@ struct StatsOverviewRow: View {
         return sleepManager.sleepRangeSummary(start: start, end: end)
     }
 
-    private var mealSummary: (totalCount: Int, typeCounts: [MealType: Int], totalWaterML: Int) {
+    private var mealSummary: (totalCount: Int, mealCount: Int, waterCount: Int, typeCounts: [MealType: Int], totalWaterML: Int) {
         let (start, end) = dateRange
         return mealManager.mealRangeSummary(start: start, end: end)
     }
@@ -340,10 +340,10 @@ struct StatsOverviewRow: View {
         String(format: "%.1f", Double(sleepSummary.count) / Double(days))
     }
 
-    private var totalMealCount: Int { mealSummary.totalCount }
+    private var totalMealCount: Int { mealSummary.mealCount }
 
     private var averageDailyMeals: Double {
-        Double(mealSummary.totalCount) / Double(days)
+        Double(mealSummary.mealCount) / Double(days)
     }
 
     private var averageDailyWaterML: Int {
@@ -523,14 +523,14 @@ struct MealStatsContent: View {
                     ?? cal.date(byAdding: .day, value: daysInMonth, to: monthDate)
                     ?? monthDate
                 let summary = mealManager.mealRangeSummary(start: monthDate, end: monthEnd)
-                return (date: monthDate, value: Double(summary.totalCount) / Double(daysInMonth))
+                return (date: monthDate, value: Double(summary.mealCount) / Double(daysInMonth))
             }
         } else {
             let days = cal.dateComponents([.day], from: start, to: end).day ?? 1
             return (0..<days).map { i in
                 let date = cal.date(byAdding: .day, value: i, to: start) ?? start
                 let summary = mealManager.mealDaySummary(for: date)
-                return (date: date, value: Double(summary.totalCount))
+                return (date: date, value: Double(summary.mealCount))
             }
         }
     }
@@ -562,7 +562,8 @@ struct MealStatsContent: View {
     private var typeDistribution: [(type: String, count: Int)] {
         let (start, end) = dateRange
         let summary = mealManager.mealRangeSummary(start: start, end: end)
-        return MealType.allCases.map { type in
+        return MealType.allCases
+            .map { type in
             (type: type.rawValue, count: summary.typeCounts[type] ?? 0)
         }.filter { $0.count > 0 }
     }
@@ -602,7 +603,7 @@ struct MealStatsContent: View {
             // 类型分布
             if !typeDistribution.isEmpty {
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    Text("进食类型分布")
+                    Text("饮食类型分布（含饮水）")
                         .font(AppTypography.calloutMedium)
                         .foregroundColor(AppColors.textSecondary)
 
@@ -622,10 +623,34 @@ struct MealStatsContent: View {
                         domain: MealType.allCases.map { $0.rawValue },
                         range: MealType.allCases.map { $0.color.opacity(0.7) }
                     )
+
+                    VStack(spacing: AppSpacing.xs) {
+                        ForEach(typeDistribution, id: \.type) { item in
+                            HStack(spacing: AppSpacing.xs) {
+                                Circle()
+                                    .fill(color(for: item.type).opacity(0.7))
+                                    .frame(width: 8, height: 8)
+
+                                Text(item.type)
+                                    .font(AppTypography.footnote)
+                                    .foregroundColor(AppColors.textSecondary)
+
+                                Spacer()
+
+                                Text("\(item.count) 次")
+                                    .font(AppTypography.footnoteMedium)
+                                    .foregroundColor(AppColors.textPrimary)
+                            }
+                        }
+                    }
                 }
                 .glassCard()
             }
         }
+    }
+
+    private func color(for typeName: String) -> Color {
+        MealType.allCases.first(where: { $0.rawValue == typeName })?.color ?? AppColors.secondary
     }
 
     private var chartTitle: String {

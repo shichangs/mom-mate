@@ -15,6 +15,8 @@ class MealRecordManager: ObservableObject, CloudSyncObserver {
 
     private struct DaySummary {
         var totalCount: Int = 0
+        var mealCount: Int = 0
+        var waterCount: Int = 0
         var typeCounts: [MealType: Int] = [:]
         var totalWaterML: Int = 0
     }
@@ -66,25 +68,41 @@ class MealRecordManager: ObservableObject, CloudSyncObserver {
         todayRecordsCache
     }
 
-    func mealDaySummary(for day: Date) -> (totalCount: Int, typeCounts: [MealType: Int], totalWaterML: Int) {
+    func mealDaySummary(for day: Date) -> (
+        totalCount: Int,
+        mealCount: Int,
+        waterCount: Int,
+        typeCounts: [MealType: Int],
+        totalWaterML: Int
+    ) {
         let key = calendar.startOfDay(for: day)
         let summary = daySummaries[key] ?? DaySummary()
-        return (summary.totalCount, summary.typeCounts, summary.totalWaterML)
+        return (summary.totalCount, summary.mealCount, summary.waterCount, summary.typeCounts, summary.totalWaterML)
     }
 
-    func mealRangeSummary(start: Date, end: Date) -> (totalCount: Int, typeCounts: [MealType: Int], totalWaterML: Int) {
+    func mealRangeSummary(start: Date, end: Date) -> (
+        totalCount: Int,
+        mealCount: Int,
+        waterCount: Int,
+        typeCounts: [MealType: Int],
+        totalWaterML: Int
+    ) {
         let startDay = calendar.startOfDay(for: start)
         let endDay = calendar.startOfDay(for: end)
-        guard startDay < endDay else { return (0, [:], 0) }
+        guard startDay < endDay else { return (0, 0, 0, [:], 0) }
 
         var cursor = startDay
         var total = 0
+        var mealCount = 0
+        var waterCount = 0
         var typeCounts: [MealType: Int] = [:]
         var totalWaterML = 0
 
         while cursor < endDay {
             if let summary = daySummaries[cursor] {
                 total += summary.totalCount
+                mealCount += summary.mealCount
+                waterCount += summary.waterCount
                 totalWaterML += summary.totalWaterML
                 for (type, count) in summary.typeCounts {
                     typeCounts[type, default: 0] += count
@@ -95,7 +113,7 @@ class MealRecordManager: ObservableObject, CloudSyncObserver {
             cursor = next
         }
 
-        return (total, typeCounts, totalWaterML)
+        return (total, mealCount, waterCount, typeCounts, totalWaterML)
     }
 
     // MARK: - Persistence (via CloudSyncStore)
@@ -130,7 +148,10 @@ class MealRecordManager: ObservableObject, CloudSyncObserver {
             summary.totalCount += 1
             summary.typeCounts[record.mealType, default: 0] += 1
             if record.mealType == .water {
+                summary.waterCount += 1
                 summary.totalWaterML += waterAmount(for: record)
+            } else {
+                summary.mealCount += 1
             }
             summaries[dayKey] = summary
 
