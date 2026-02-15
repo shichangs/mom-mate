@@ -39,7 +39,7 @@
 
 ## 命令规范
 - 代码变更后（非纯文档变更）必须执行：
-  - `xcodebuild -project MomMate.xcodeproj -scheme MomMate -destination 'platform=iOS Simulator,name=iPhone 16' build`
+  - `xcodebuild -project MomMate.xcodeproj -scheme MomMate -destination 'platform=iOS Simulator,name=iPhone 17' build`
 - 若本机不存在该模拟器，使用可用 destination 并在结果里说明。
 - 未经用户要求，不运行启动类命令（如 `open`、`xed`、主动拉起模拟器流程）。
 - 未经用户明确要求，不提交 commit。
@@ -48,6 +48,14 @@
 - 每次发布用户可感知更新时，必须递增小版本号（`CFBundleShortVersionString` 的 patch 位）。
 - 设置页必须展示当前版本号与构建号，格式为：`v主版本.次版本.小版本 (构建号)`。
 - 设置页必须向用户展示简洁的“本次更新”变更信息，且内容与当前版本对应。
+
+## 经验教训沉淀（强制）
+- 每次遇到问题或完成重要改动后，必须在 `./PROGRESS.md` 记录：
+  - 遇到了什么问题
+  - 如何解决的
+  - 以后如何避免
+  - 对应 `git commit ID`
+- 同样的问题不应重复发生。
 
 ## 测试与验证
 - 手工回归基线使用 `docs/testing/REGRESSION_CHECKLIST.md`。
